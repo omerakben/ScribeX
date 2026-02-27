@@ -2,7 +2,6 @@
 
 import { useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { motion } from "framer-motion";
 import { Copy, Download, ExternalLink, MoreHorizontal, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { PAPER_TEMPLATES } from "@/lib/constants";
@@ -17,11 +16,11 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 const statusClasses: Record<PaperStatus, string> = {
-  draft: "bg-ink-100 text-ink-700",
-  "in-review": "bg-blue-100 text-blue-800",
-  revision: "bg-amber-100 text-amber-800",
-  final: "bg-green-100 text-green-800",
-  published: "bg-brand-100 text-brand-800",
+  draft: "bg-ink-100 text-ink-600",
+  "in-review": "bg-amber-50 text-amber-700",
+  revision: "bg-amber-50 text-amber-700",
+  final: "bg-emerald-50 text-emerald-700",
+  published: "bg-brand-50 text-brand-700",
 };
 
 function relativeTime(date: string) {
@@ -48,7 +47,7 @@ interface PaperCardProps {
   index: number;
 }
 
-export function PaperCard({ paper, index }: PaperCardProps) {
+export function PaperCard({ paper }: PaperCardProps) {
   const router = useRouter();
   const papers = useEditorStore((s) => s.papers);
   const setPapers = useEditorStore((s) => s.setPapers);
@@ -86,45 +85,44 @@ export function PaperCard({ paper, index }: PaperCardProps) {
   };
 
   return (
-    <motion.article
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3, delay: index * 0.05 }}
-      className="group rounded-2xl border border-ink-200 bg-surface p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-brand-300 hover:shadow-md"
+    <article
+      className="bg-white border border-ink-200 rounded-xl p-5 hover:shadow-md transition-shadow cursor-pointer"
+      onClick={handleOpen}
     >
-      <div className="flex items-start justify-between gap-3">
-        <button
-          onClick={handleOpen}
-          className="flex-1 text-left"
-          aria-label={`Open ${paper.title}`}
-        >
-          <h3 className="line-clamp-2 text-base font-semibold text-ink-950">{paper.title}</h3>
-        </button>
+      {/* Top row: title + dropdown */}
+      <div className="flex justify-between items-start">
+        <h3 className="text-base font-medium text-ink-900 line-clamp-1 hover:text-brand-600 transition-colors flex-1 pr-2">
+          {paper.title}
+        </h3>
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button
-              className="rounded-lg border border-transparent p-1.5 text-ink-500 transition hover:border-ink-300 hover:bg-white hover:text-ink-900"
+              onClick={(e) => e.stopPropagation()}
+              className="w-8 h-8 rounded-lg hover:bg-ink-100 flex items-center justify-center flex-shrink-0 transition-colors duration-150"
               aria-label={`Actions for ${paper.title}`}
             >
-              <MoreHorizontal className="h-4 w-4" />
+              <MoreHorizontal className="w-4 h-4 text-ink-400" />
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-44">
-            <DropdownMenuItem onClick={handleOpen}>
+            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleOpen(); }}>
               <ExternalLink className="h-4 w-4" />
               Open
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={handleDuplicate}>
+            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleDuplicate(); }}>
               <Copy className="h-4 w-4" />
               Duplicate
             </DropdownMenuItem>
-            <DropdownMenuItem>
+            <DropdownMenuItem onClick={(e) => e.stopPropagation()}>
               <Download className="h-4 w-4" />
               Export
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={handleDelete} className="text-error focus:text-error">
+            <DropdownMenuItem
+              onClick={(e) => { e.stopPropagation(); handleDelete(); }}
+              className="text-error focus:text-error"
+            >
               <Trash2 className="h-4 w-4" />
               Delete
             </DropdownMenuItem>
@@ -132,27 +130,32 @@ export function PaperCard({ paper, index }: PaperCardProps) {
         </DropdownMenu>
       </div>
 
-      <div className="mt-4 flex flex-wrap items-center gap-2">
-        <span className={cn("rounded-full px-2.5 py-1 text-[11px] font-semibold capitalize", statusClasses[paper.status])}>
+      {/* Middle: status + template badges */}
+      <div className="mt-3 flex flex-wrap items-center gap-1.5">
+        <span
+          className={cn(
+            "text-[11px] font-medium px-2 py-0.5 rounded-full capitalize",
+            statusClasses[paper.status]
+          )}
+        >
           {paper.status}
         </span>
-        <span className="rounded-full bg-ink-100 px-2.5 py-1 text-[11px] font-semibold text-ink-700">
-          {metadata.templateLabel}
-        </span>
-        <span className="rounded-full bg-mercury-100 px-2.5 py-1 text-[11px] font-semibold text-mercury-800">
-          {paper.citationStyle.toUpperCase()}
-        </span>
+        {paper.template && (
+          <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-ink-50 text-ink-600">
+            {metadata.templateLabel}
+          </span>
+        )}
       </div>
 
-      <div className="mt-4 space-y-1 text-xs text-ink-500">
-        {paper.field ? <p>Field: {paper.field}</p> : null}
-        {paper.targetJournal ? <p>Target journal: {paper.targetJournal}</p> : null}
+      {/* Bottom: field + word count / time */}
+      <div className="mt-4 pt-3 border-t border-ink-100 flex items-center justify-between">
+        <span className="text-xs text-ink-400">
+          {paper.field ?? "No field set"}
+        </span>
+        <span className="text-xs text-ink-400">
+          {paper.wordCount.toLocaleString()} words &middot; {metadata.updatedLabel}
+        </span>
       </div>
-
-      <div className="mt-5 flex items-center justify-between border-t border-ink-200 pt-4 text-sm text-ink-600">
-        <span>{paper.wordCount.toLocaleString()} words</span>
-        <span className="font-medium">Updated {metadata.updatedLabel}</span>
-      </div>
-    </motion.article>
+    </article>
   );
 }

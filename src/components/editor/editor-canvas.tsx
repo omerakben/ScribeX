@@ -19,7 +19,6 @@ import TextAlign from "@tiptap/extension-text-align";
 import { TextStyle } from "@tiptap/extension-text-style";
 import Typography from "@tiptap/extension-typography";
 import Underline from "@tiptap/extension-underline";
-import { BookOpenText, Sparkles } from "lucide-react";
 import { applyEdit, streamChatCompletion } from "@/lib/mercury/client";
 import { useEditorStore } from "@/lib/store/editor-store";
 import { SlashCommandMenu } from "@/components/editor/slash-command-menu";
@@ -243,32 +242,19 @@ export function EditorCanvas({ onEditorReady }: EditorCanvasProps) {
   if (!editor) return null;
 
   return (
-    <section className="editor-scroll-area relative flex min-w-0 flex-1 flex-col overflow-y-auto">
-      <div className="mx-auto w-full max-w-[1080px] px-4 pb-8 pt-8 lg:px-8">
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-ink-200 bg-white/86 px-4 py-3 shadow-sm backdrop-blur">
-          <p className="inline-flex items-center gap-2 text-sm font-semibold text-ink-800">
-            <BookOpenText className="h-4 w-4 text-brand-600" />
-            {currentPaper?.title ?? "Untitled Paper"}
-          </p>
-          <p className="inline-flex items-center gap-2 text-xs text-ink-600">
-            <Sparkles className="h-3.5 w-3.5 text-mercury-600" />
-            Type <span className="rounded bg-ink-100 px-1.5 py-0.5 font-mono text-[11px]">/</span> for command palette
-          </p>
-        </div>
-
-        <div className="relative rounded-[26px] border border-ink-200 bg-white px-6 py-8 shadow-lg lg:px-12 lg:py-10">
+    <section className="editor-scroll-area relative flex min-w-0 flex-1 flex-col overflow-y-auto bg-ink-50">
+      <div className="mx-auto w-full max-w-[740px] px-16 pb-16 pt-12">
+        <div className="min-h-[calc(100vh-6rem)] bg-white px-16 py-12">
           <EditorContent editor={editor} />
           <SlashCommandMenu editor={editor} onCommand={handleSlashCommand} />
         </div>
       </div>
 
-      <footer className="sticky bottom-0 border-t border-ink-200/70 bg-white/88 px-4 py-2 backdrop-blur lg:px-8">
-        <div className="mx-auto flex w-full max-w-[1080px] items-center justify-end">
-          <p className="text-[11px] text-ink-500 tabular-nums">
-            {editor.storage.characterCount.words().toLocaleString()} words / {" "}
-            {editor.storage.characterCount.characters().toLocaleString()} characters
-          </p>
-        </div>
+      <footer className="sticky bottom-0 bg-white border-t border-ink-200 px-4 pb-2 pt-1.5">
+        <p className="text-xs text-ink-400 text-right pr-4">
+          {editor.storage.characterCount.words().toLocaleString()} words &nbsp;&middot;&nbsp;{" "}
+          {editor.storage.characterCount.characters().toLocaleString()} characters
+        </p>
       </footer>
     </section>
   );

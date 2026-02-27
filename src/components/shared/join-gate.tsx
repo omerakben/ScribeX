@@ -1,10 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { motion } from "framer-motion";
-import { Lock, Sparkles } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { PenLine } from "lucide-react";
 
 const JOIN_CODE = process.env.NEXT_PUBLIC_JOIN_CODE;
 const STORAGE_KEY = "scribex-joined";
@@ -35,64 +32,77 @@ export function JoinGate({ children }: { children: React.ReactNode }) {
   if (joined) return <>{children}</>;
 
   return (
-    <div className="flex min-h-screen items-center justify-center overflow-hidden bg-ink-950 px-4">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_12%_18%,rgba(78,115,244,0.24),transparent_34%),radial-gradient(circle_at_88%_20%,rgba(34,190,154,0.2),transparent_38%)]" />
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-gradient-to-br from-brand-950 via-brand-900 to-ink-950">
+      {/* Background grid */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 opacity-[0.06]"
+        style={{
+          backgroundImage:
+            "linear-gradient(rgba(255,255,255,0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.5) 1px, transparent 1px)",
+          backgroundSize: "48px 48px",
+        }}
+      />
 
-      <motion.div
-        initial={{ opacity: 0, scale: 0.95, y: 16 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        transition={{ duration: 0.45 }}
-        className="relative w-full max-w-md"
+      <div
+        className="relative bg-white rounded-2xl shadow-2xl p-8 max-w-sm w-full mx-4"
+        style={{ animation: "scale-in 200ms ease" }}
       >
-        <div className="rounded-3xl border border-white/15 bg-ink-950/85 p-7 shadow-2xl backdrop-blur-xl">
-          <div className="text-center">
-            <div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl border border-mercury-300/30 bg-mercury-500/20">
-              <Sparkles className="h-7 w-7 text-mercury-300" />
-            </div>
-            <h1 className="mt-4 font-serif text-3xl font-semibold tracking-tight text-white">ScribeX</h1>
-            <p className="mt-2 text-sm text-ink-300">Mercury-powered academic writing workspace</p>
+        {/* Logo */}
+        <div className="flex flex-col items-center mb-8">
+          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-brand-600 mb-4 shadow-md">
+            <PenLine className="h-6 w-6 text-white" />
           </div>
-
-          <form onSubmit={handleSubmit} className="mt-6 space-y-4">
-            <div>
-              <label htmlFor="join-code" className="mb-2 inline-flex items-center gap-2 text-sm font-semibold text-ink-200">
-                <Lock className="h-3.5 w-3.5" />
-                Join code
-              </label>
-              <Input
-                id="join-code"
-                type="text"
-                value={code}
-                onChange={(event) => {
-                  setCode(event.target.value);
-                  setError(false);
-                }}
-                className={
-                  error
-                    ? "h-11 border-error bg-ink-900 text-white placeholder:text-ink-500"
-                    : "h-11 border-ink-600 bg-ink-900 text-white placeholder:text-ink-500"
-                }
-                placeholder="Enter access code"
-                autoFocus
-                autoComplete="off"
-              />
-
-              {error ? (
-                <p className="mt-2 text-xs text-red-300">Code not recognized. Please try again.</p>
-              ) : null}
-            </div>
-
-            <Button type="submit" className="h-11 w-full gap-2" variant="mercury" disabled={!code.trim()}>
-              <Sparkles className="h-4 w-4" />
-              Enter ScribeX
-            </Button>
-          </form>
-
-          <p className="mt-5 text-center text-xs text-ink-500">
-            Built with <span className="font-semibold text-mercury-300">Mercury dLLM</span> by TUEL AI
+          <h1 className="font-serif text-2xl font-semibold text-ink-950">ScribeX</h1>
+          <p className="mt-1.5 text-sm text-ink-400 text-center">
+            Academic writing, intelligently assisted
           </p>
         </div>
-      </motion.div>
+
+        <p className="text-sm font-medium text-ink-600 text-center mb-4">
+          Enter your access code to continue
+        </p>
+
+        <form onSubmit={handleSubmit} className="space-y-3">
+          <div>
+            <label htmlFor="join-code" className="sr-only">
+              Access code
+            </label>
+            <input
+              id="join-code"
+              type="text"
+              value={code}
+              onChange={(event) => {
+                setCode(event.target.value);
+                setError(false);
+              }}
+              className={[
+                "w-full border rounded-xl px-4 py-3 text-sm text-center tracking-widest font-mono bg-ink-50",
+                "focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 focus:bg-white",
+                "placeholder:text-ink-400 placeholder:tracking-normal placeholder:font-sans transition-colors",
+                error ? "border-rose-300 bg-rose-50" : "border-ink-200",
+              ].join(" ")}
+              placeholder="XXXX-XXXX"
+              autoFocus
+              autoComplete="off"
+            />
+
+            {error ? (
+              <p className="mt-2 text-xs text-rose-600 text-center">
+                Code not recognized. Please try again.
+              </p>
+            ) : null}
+          </div>
+
+          <button
+            type="submit"
+            disabled={!code.trim()}
+            className="w-full bg-brand-600 text-white hover:bg-brand-700 disabled:opacity-40 disabled:cursor-not-allowed rounded-xl py-3 font-medium text-sm transition-colors shadow-sm"
+          >
+            Continue →
+          </button>
+        </form>
+      </div>
     </div>
   );
 }

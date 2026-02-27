@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
 import {
   BookOpen,
   ChevronRight,
@@ -10,12 +9,7 @@ import {
   Loader2,
   MessageSquare,
   Send,
-  Sparkles,
-  Trash2,
 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils/cn";
 import { streamChatCompletion } from "@/lib/mercury/client";
 import { useEditorStore } from "@/lib/store/editor-store";
@@ -27,12 +21,14 @@ interface AIPanelProps {
   editor: Editor | null;
 }
 
-const tabIcons: Record<AIPanelMode, React.ComponentType<{ className?: string }>> = {
-  chat: MessageSquare,
-  review: ClipboardCheck,
-  citations: BookOpen,
-  outline: ListTree,
-};
+const TABS: { mode: AIPanelMode; label: string; Icon: React.ComponentType<{ className?: string }> }[] = [
+  { mode: "chat", label: "Chat", Icon: MessageSquare },
+  { mode: "review", label: "Review", Icon: ClipboardCheck },
+  { mode: "citations", label: "Citations", Icon: BookOpen },
+  { mode: "outline", label: "Outline", Icon: ListTree },
+];
+
+// ─── Chat Tab ──────────────────────────────────────────────────
 
 function ChatTab({ editor }: { editor: Editor | null }) {
   const aiMessages = useEditorStore((s) => s.aiMessages);
@@ -124,13 +120,14 @@ function ChatTab({ editor }: { editor: Editor | null }) {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex-1 space-y-3 overflow-y-auto px-4 py-4">
+      {/* Messages area */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {aiMessages.length === 0 ? (
-          <div className="flex h-full flex-col items-center justify-center rounded-2xl border border-ink-200 bg-surface px-4 text-center">
-            <Sparkles className="h-8 w-8 text-mercury-500" />
-            <p className="mt-3 text-sm font-semibold text-ink-900">Ask Mercury about this manuscript</p>
-            <p className="mt-1 text-xs leading-relaxed text-ink-500">
-              The full document is added as context for drafting guidance and review.
+          <div className="flex h-full flex-col items-center justify-center text-center">
+            <MessageSquare className="w-8 h-8 text-ink-300 mb-3" />
+            <p className="text-sm text-ink-500">Ask about your manuscript</p>
+            <p className="mt-1 text-xs text-ink-400">
+              Get drafting help, feedback, and suggestions.
             </p>
           </div>
         ) : (
@@ -138,57 +135,47 @@ function ChatTab({ editor }: { editor: Editor | null }) {
             <article
               key={message.id}
               className={cn(
-                "flex flex-col gap-1",
-                message.role === "user" ? "items-end" : "items-start"
+                "flex",
+                message.role === "user" ? "justify-end" : "justify-start"
               )}
             >
               <div
                 className={cn(
-                  "max-w-[92%] whitespace-pre-wrap rounded-xl px-3 py-2 text-sm leading-relaxed",
+                  "max-w-[85%] whitespace-pre-wrap text-sm",
                   message.role === "user"
-                    ? "bg-brand-600 text-white"
-                    : "border border-ink-200 bg-white text-ink-800"
+                    ? "bg-brand-600 text-white rounded-2xl rounded-br-md px-4 py-2.5"
+                    : "bg-ink-50 text-ink-700 rounded-2xl rounded-bl-md px-4 py-2.5 leading-relaxed"
                 )}
               >
                 {message.content || (
-                  <span className="inline-flex items-center gap-1 text-ink-500">
+                  <span className="inline-flex items-center gap-1.5 text-ink-400">
                     <Loader2 className="h-3.5 w-3.5 animate-spin" />
                     Thinking
                   </span>
                 )}
               </div>
-
-              {message.role === "assistant" && message.model ? (
-                <Badge
-                  variant="mercury"
-                  className="border border-mercury-200 bg-mercury-50 px-1.5 py-0 text-[10px] uppercase tracking-[0.1em]"
-                >
-                  {message.model}
-                </Badge>
-              ) : null}
             </article>
           ))
         )}
         <div ref={endRef} />
       </div>
 
-      <div className="border-t border-ink-200 bg-white px-4 py-3">
+      {/* Input area */}
+      <div className="border-t border-ink-100 p-3">
         {aiMessages.length > 0 ? (
-          <div className="mb-2 flex justify-end">
-            <Button
-              size="sm"
-              variant="ghost"
-              className="h-7 gap-1 text-xs"
+          <div className="flex justify-end mb-2">
+            <button
+              type="button"
               onClick={clearAIMessages}
               disabled={isStreaming}
+              className="text-xs text-ink-400 hover:text-ink-600 transition-colors disabled:opacity-40"
             >
-              <Trash2 className="h-3.5 w-3.5" />
-              Clear
-            </Button>
+              Clear chat
+            </button>
           </div>
         ) : null}
 
-        <div className="flex items-end gap-2">
+        <div className="relative">
           <textarea
             value={input}
             onChange={(event) => setInput(event.target.value)}
@@ -198,25 +185,30 @@ function ChatTab({ editor }: { editor: Editor | null }) {
                 handleSend();
               }
             }}
-            placeholder="Ask for rewrites, critique, or evidence suggestions..."
-            rows={2}
-            className="min-h-[64px] flex-1 resize-none rounded-xl border border-ink-300 bg-surface px-3 py-2 text-sm text-ink-900 outline-none transition focus:border-brand-400 focus:ring-2 focus:ring-brand-300/30"
+            placeholder="Ask about your paper..."
+            className="w-full border border-ink-200 rounded-lg px-3 py-2 pr-10 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 placeholder:text-ink-400 min-h-[40px] max-h-[120px] text-ink-900"
+            style={{ minHeight: "40px" }}
           />
-
-          <Button
-            size="icon"
+          <button
+            type="button"
             onClick={handleSend}
             disabled={!input.trim() || isStreaming}
-            aria-label="Send"
-            className="h-10 w-10"
+            aria-label="Send message"
+            className="absolute bottom-2 right-2 w-7 h-7 rounded-md bg-brand-600 text-white hover:bg-brand-700 disabled:opacity-40 flex items-center justify-center transition-colors"
           >
-            {isStreaming ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-          </Button>
+            {isStreaming ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Send className="h-3.5 w-3.5" />
+            )}
+          </button>
         </div>
       </div>
     </div>
   );
 }
+
+// ─── Review Tab ────────────────────────────────────────────────
 
 interface ReviewCategory {
   label: string;
@@ -298,45 +290,64 @@ Manuscript:\n${content}`,
   }, [editor, setActiveWritingMode, setIsAIStreaming]);
 
   const getScoreColor = (score: number) => {
-    if (score >= 8) return "text-success";
-    if (score >= 5) return "text-warning";
-    return "text-error";
+    if (score >= 8) return "text-emerald-600";
+    if (score >= 5) return "text-amber-600";
+    return "text-rose-600";
   };
 
   return (
     <div className="flex h-full flex-col">
-      <div className="px-4 pt-4">
-        <Button onClick={runReview} loading={isReviewing} variant="mercury" className="w-full" size="sm">
-          <ClipboardCheck className="mr-1.5 h-4 w-4" />
-          {isReviewing ? "Reviewing manuscript" : "Run manuscript review"}
-        </Button>
+      {/* Run review button */}
+      <div className="p-4 border-b border-ink-100">
+        <button
+          type="button"
+          onClick={runReview}
+          disabled={isReviewing}
+          className="w-full bg-brand-600 text-white hover:bg-brand-700 disabled:opacity-60 rounded-lg py-2.5 text-sm font-medium transition-colors flex items-center justify-center gap-2"
+        >
+          {isReviewing ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Reviewing manuscript
+            </>
+          ) : (
+            <>
+              <ClipboardCheck className="h-4 w-4" />
+              Run Review
+            </>
+          )}
+        </button>
       </div>
 
-      <div className="mt-4 flex-1 space-y-3 overflow-y-auto px-4 pb-4">
+      {/* Results area */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {results.length === 0 && !isReviewing ? (
-          <div className="rounded-2xl border border-ink-200 bg-surface p-5 text-center">
-            <p className="text-sm font-semibold text-ink-900">No review yet</p>
-            <p className="mt-2 text-xs text-ink-500">
-              Evaluate structure, tone, argument progression, and citation coverage.
+          <div className="flex h-full items-center justify-center text-center">
+            <p className="text-sm text-ink-500">
+              Run a review to get feedback on your manuscript
             </p>
           </div>
         ) : null}
 
         {results.map((result) => (
-          <article key={result.label} className="rounded-xl border border-ink-200 bg-white p-4">
-            <div className="flex items-center justify-between">
-              <p className="text-sm font-semibold text-ink-900">{result.label}</p>
+          <article key={result.label} className="bg-ink-50 rounded-xl p-4">
+            <div className="flex justify-between items-center mb-2">
+              <p className="text-sm font-medium text-ink-900">{result.label}</p>
               {result.score > 0 ? (
-                <p className={cn("text-sm font-semibold tabular-nums", getScoreColor(result.score))}>{result.score}/10</p>
+                <p className={cn("text-sm font-semibold tabular-nums", getScoreColor(result.score))}>
+                  {result.score}/10
+                </p>
               ) : null}
             </div>
-            <p className="mt-2 text-xs leading-relaxed text-ink-600">{result.feedback}</p>
+            <p className="text-sm text-ink-600 leading-relaxed">{result.feedback}</p>
           </article>
         ))}
       </div>
     </div>
   );
 }
+
+// ─── Outline Tab ───────────────────────────────────────────────
 
 interface HeadingItem {
   level: number;
@@ -381,28 +392,32 @@ function OutlineTab({ editor }: { editor: Editor | null }) {
   };
 
   return (
-    <div className="h-full overflow-y-auto px-4 py-4">
+    <div className="p-4 flex-1 overflow-y-auto">
       {headings.length === 0 ? (
-        <div className="rounded-2xl border border-ink-200 bg-surface p-5 text-center">
-          <p className="text-sm font-semibold text-ink-900">No headings detected</p>
-          <p className="mt-2 text-xs text-ink-500">Add H1/H2/H3 headings to build a navigable outline.</p>
+        <div className="flex h-full items-center justify-center text-center">
+          <p className="text-sm text-ink-500">Add headings to see your outline</p>
         </div>
       ) : (
         <nav className="space-y-1" aria-label="Document outline">
           {headings.map((heading, index) => (
             <button
               key={`${heading.pos}-${index}`}
+              type="button"
               onClick={() => jumpTo(heading.pos)}
               className={cn(
-                "flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm transition",
-                "hover:bg-surface-secondary",
-                heading.level === 1 && "font-semibold text-ink-900",
-                heading.level === 2 && "pl-5 text-ink-700",
-                heading.level === 3 && "pl-8 text-ink-600"
+                "w-full text-left rounded-md transition-colors",
+                heading.level === 1 &&
+                  "text-sm font-medium text-ink-900 pl-0 py-1.5 hover:text-brand-600 hover:bg-ink-50 px-2",
+                heading.level === 2 &&
+                  "text-sm text-ink-700 pl-4 py-1 hover:text-brand-600 hover:bg-ink-50 px-2",
+                heading.level === 3 &&
+                  "text-sm text-ink-500 pl-8 py-1 hover:text-brand-600 hover:bg-ink-50 px-2"
               )}
             >
-              <ChevronRight className="h-3.5 w-3.5 shrink-0 text-ink-400" />
-              <span className="truncate">{heading.text || "Untitled section"}</span>
+              <span className="flex items-center gap-2">
+                <ChevronRight className="h-3.5 w-3.5 shrink-0 text-ink-400" />
+                <span className="truncate">{heading.text || "Untitled section"}</span>
+              </span>
             </button>
           ))}
         </nav>
@@ -410,6 +425,8 @@ function OutlineTab({ editor }: { editor: Editor | null }) {
     </div>
   );
 }
+
+// ─── Main Panel ────────────────────────────────────────────────
 
 export function AIPanel({ editor }: AIPanelProps) {
   const aiPanelOpen = useEditorStore((s) => s.aiPanelOpen);
@@ -431,58 +448,59 @@ export function AIPanel({ editor }: AIPanelProps) {
     [editor]
   );
 
+  if (!aiPanelOpen) return null;
+
   return (
-    <AnimatePresence mode="wait">
-      {aiPanelOpen ? (
-        <motion.aside
-          initial={{ width: 0, opacity: 0 }}
-          animate={{ width: 430, opacity: 1 }}
-          exit={{ width: 0, opacity: 0 }}
-          transition={{ duration: 0.2, ease: "easeInOut" }}
-          className="hidden h-full shrink-0 overflow-hidden border-l border-ink-200 bg-white lg:flex lg:flex-col"
-          aria-label="AI panel"
-        >
-          <Tabs
-            value={aiPanelMode}
-            onValueChange={(value) => setAIPanelMode(value as AIPanelMode)}
-            className="flex h-full flex-col"
-          >
-            <div className="border-b border-ink-200 px-3 pt-3">
-              <TabsList className="w-full justify-start border-0">
-                {(Object.keys(tabIcons) as AIPanelMode[]).map((mode) => {
-                  const Icon = tabIcons[mode];
-                  return (
-                    <TabsTrigger
-                      key={mode}
-                      value={mode}
-                      className="gap-1.5 rounded-md border-b-0 data-[state=active]:bg-surface-secondary data-[state=active]:text-brand-700"
-                    >
-                      <Icon className="h-3.5 w-3.5" />
-                      {mode}
-                    </TabsTrigger>
-                  );
-                })}
-              </TabsList>
-            </div>
+    <aside
+      className="w-[320px] border-l border-ink-200 bg-white flex flex-col h-full shrink-0"
+      aria-label="AI panel"
+    >
+      {/* Panel header */}
+      <div className="flex items-center justify-between px-4 py-3 border-b border-ink-100 bg-white shrink-0">
+        <div className="flex items-center gap-2">
+          <div className="h-5 w-5 rounded bg-brand-600 flex items-center justify-center">
+            <MessageSquare className="h-3 w-3 text-white" />
+          </div>
+          <span className="text-sm font-semibold text-ink-900">AI Assistant</span>
+        </div>
+        <div className="flex items-center gap-0.5">
+          {TABS.map(({ mode, label, Icon }) => (
+            <button
+              key={mode}
+              type="button"
+              onClick={() => setAIPanelMode(mode)}
+              title={label}
+              aria-label={label}
+              className={cn(
+                "h-7 w-7 flex items-center justify-center rounded-md transition-colors",
+                aiPanelMode === mode
+                  ? "bg-brand-50 text-brand-600"
+                  : "text-ink-400 hover:text-ink-600 hover:bg-ink-50"
+              )}
+            >
+              <Icon className="w-3.5 h-3.5" />
+            </button>
+          ))}
+        </div>
+      </div>
+      {/* Active tab label */}
+      <div className="px-4 py-2 bg-ink-50 border-b border-ink-100 shrink-0">
+        <span className="text-xs font-medium text-ink-500 uppercase tracking-wide">
+          {TABS.find(t => t.mode === aiPanelMode)?.label}
+        </span>
+      </div>
 
-            <TabsContent value="chat" className="mt-0 flex-1 overflow-hidden">
-              <ChatTab editor={editor} />
-            </TabsContent>
-
-            <TabsContent value="review" className="mt-0 flex-1 overflow-hidden">
-              <ReviewTab editor={editor} />
-            </TabsContent>
-
-            <TabsContent value="citations" className="mt-0 flex-1 overflow-hidden px-4 py-4">
-              <CitationSearch onInsert={handleInsertCitation} />
-            </TabsContent>
-
-            <TabsContent value="outline" className="mt-0 flex-1 overflow-hidden">
-              <OutlineTab editor={editor} />
-            </TabsContent>
-          </Tabs>
-        </motion.aside>
-      ) : null}
-    </AnimatePresence>
+      {/* Tab content */}
+      <div className="flex-1 overflow-hidden flex flex-col">
+        {aiPanelMode === "chat" && <ChatTab editor={editor} />}
+        {aiPanelMode === "review" && <ReviewTab editor={editor} />}
+        {aiPanelMode === "citations" && (
+          <div className="p-4 flex flex-col h-full">
+            <CitationSearch onInsert={handleInsertCitation} />
+          </div>
+        )}
+        {aiPanelMode === "outline" && <OutlineTab editor={editor} />}
+      </div>
+    </aside>
   );
 }

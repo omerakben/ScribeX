@@ -2,10 +2,10 @@ import Link from "next/link";
 
 const columns = {
   Product: [
-    { label: "Capabilities", href: "#features" },
-    { label: "Benchmarks", href: "#speed" },
+    { label: "Features", href: "#features" },
     { label: "Workflow", href: "#how-it-works" },
     { label: "Pricing", href: "#pricing" },
+    { label: "Templates", href: "/dashboard/templates" },
   ],
   Research: [
     { label: "Citation engine", href: "#" },
@@ -23,36 +23,44 @@ const columns = {
 
 export function Footer() {
   return (
-    <footer className="border-t border-ink-200 bg-surface-secondary/80">
-      <div className="mx-auto w-full max-w-7xl px-6 py-16 lg:px-8">
-        <div className="grid gap-10 lg:grid-cols-[1.1fr_2fr]">
-          <div>
-            <Link href="/" className="inline-flex items-center gap-3">
-              <div className="relative grid h-10 w-10 place-items-center rounded-xl border border-brand-300/60 bg-brand-600 text-white">
-                <span className="font-serif text-lg font-semibold">S</span>
-                <span className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full bg-mercury-300" />
-              </div>
-              <div>
-                <p className="font-serif text-2xl font-semibold tracking-tight text-ink-950">ScribeX</p>
-                <p className="text-xs uppercase tracking-[0.14em] text-ink-500">Mercury-powered writing</p>
-              </div>
-            </Link>
+    <footer className="relative overflow-hidden bg-brand-950">
+      {/* Subtle gradient orb */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute -bottom-32 -right-32 h-[400px] w-[400px] rounded-full"
+        style={{
+          background:
+            "radial-gradient(circle at center, oklch(44.2% 0.148 252 / 0.15) 0%, transparent 65%)",
+        }}
+      />
 
-            <p className="mt-5 max-w-md text-sm leading-relaxed text-ink-600">
-              Academic interface for rapid drafting, argument refinement, and compliant AI-assisted publishing.
+      <div className="relative mx-auto w-full max-w-6xl px-6 py-16">
+        <div className="grid gap-10 lg:grid-cols-[1.2fr_2fr]">
+          {/* Brand */}
+          <div>
+            <Link href="/" className="inline-flex items-center">
+              <span className="font-serif text-xl font-semibold text-white">
+                ScribeX
+              </span>
+            </Link>
+            <p className="mt-3 text-sm text-brand-300/60">
+              Academic writing, intelligently assisted.
             </p>
           </div>
 
+          {/* Links */}
           <div className="grid grid-cols-2 gap-8 sm:grid-cols-3">
             {Object.entries(columns).map(([heading, links]) => (
               <div key={heading}>
-                <p className="text-sm font-semibold text-ink-900">{heading}</p>
+                <p className="text-xs font-semibold uppercase tracking-wider text-brand-400">
+                  {heading}
+                </p>
                 <ul className="mt-4 space-y-3">
                   {links.map((link) => (
                     <li key={link.label}>
                       <a
                         href={link.href}
-                        className="text-sm text-ink-600 transition-colors hover:text-ink-900"
+                        className="text-sm text-brand-300/60 transition-colors duration-150 hover:text-brand-200"
                       >
                         {link.label}
                       </a>
@@ -64,12 +72,8 @@ export function Footer() {
           </div>
         </div>
 
-        <div className="mt-12 flex flex-col gap-2 border-t border-ink-200 pt-7 text-xs text-ink-500 sm:flex-row sm:items-center sm:justify-between">
-          <p>&copy; {new Date().getFullYear()} ScribeX. All rights reserved.</p>
-          <p>
-            Built on <span className="font-semibold text-mercury-700">mercury-2</span> and
-            <span className="font-semibold text-mercury-700"> mercury-edit</span> from Inception Labs.
-          </p>
+        <div className="mt-12 border-t border-brand-800/60 pt-7">
+          <p className="text-xs text-brand-400/60">&copy; 2026 ScribeX</p>
         </div>
       </div>
     </footer>

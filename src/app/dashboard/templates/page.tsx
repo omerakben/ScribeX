@@ -9,10 +9,8 @@ import {
   Presentation,
   ScrollText,
   Search,
-  WandSparkles,
 } from "lucide-react";
 import { TopBar } from "@/components/dashboard/top-bar";
-import { Button } from "@/components/ui/button";
 import { PAPER_TEMPLATES } from "@/lib/constants";
 import { useDashboardStore } from "@/lib/store/editor-store";
 import type { PaperTemplate } from "@/lib/types";
@@ -41,55 +39,59 @@ export default function TemplatesPage() {
     <>
       <TopBar
         title="Templates"
-        subtitle="Choose a paper scaffold that fits your target submission format."
+        subtitle="Start with a structured foundation"
         showSearch={false}
       />
 
-      <div className="flex flex-1 flex-col overflow-auto px-5 pb-8 pt-6 lg:px-8">
-        <div className="mb-6 rounded-2xl border border-mercury-200 bg-mercury-50/80 p-4">
-          <p className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.11em] text-mercury-800">
-            <WandSparkles className="h-3.5 w-3.5" />
-            Template intelligence
-          </p>
-          <p className="mt-2 text-sm text-mercury-900">
-            Templates initialize section architecture, citation defaults, and writing guidance for faster first drafts.
-          </p>
-        </div>
+      <div className="flex flex-1 flex-col overflow-auto p-8">
+        <div className="max-w-6xl w-full mx-auto">
 
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          {(Object.entries(PAPER_TEMPLATES) as Array<[
-            PaperTemplate,
-            (typeof PAPER_TEMPLATES)[PaperTemplate],
-          ]>).map(([key, template]) => {
-            const Icon = templateIcons[key];
+          {/* Template grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 mt-6">
+            {(Object.entries(PAPER_TEMPLATES) as Array<[
+              PaperTemplate,
+              (typeof PAPER_TEMPLATES)[PaperTemplate],
+            ]>).map(([key, template]) => {
+              const Icon = templateIcons[key];
+              const visibleSections = template.sections.slice(0, 3);
+              const extraCount = template.sections.length - 3;
+              const sectionPreview = visibleSections.join(" · ") + (extraCount > 0 ? ` +${extraCount} more` : "");
 
-            return (
-              <article key={key} className="rounded-2xl border border-ink-200 bg-white p-5 shadow-sm">
-                <div className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-ink-200 bg-surface-secondary text-brand-700">
-                  <Icon className="h-4 w-4" />
-                </div>
-                <h2 className="mt-4 text-lg font-semibold text-ink-950">{template.label}</h2>
-                <p className="mt-2 text-sm leading-relaxed text-ink-600">{template.description}</p>
+              return (
+                <article
+                  key={key}
+                  className="group bg-white border border-ink-200 rounded-xl p-5 hover:border-brand-200 hover:shadow-md transition-all duration-200 cursor-pointer"
+                  onClick={() => handleUseTemplate(key)}
+                >
+                  {/* Icon */}
+                  <div className="w-9 h-9 rounded-lg bg-ink-50 group-hover:bg-brand-50 flex items-center justify-center mb-4 transition-colors duration-200">
+                    <Icon className="w-4.5 h-4.5 text-ink-400 group-hover:text-brand-600 transition-colors duration-200" />
+                  </div>
 
-                {template.sections.length > 0 ? (
-                  <ul className="mt-4 space-y-1.5 text-sm text-ink-700">
-                    {template.sections.slice(0, 4).map((section) => (
-                      <li key={section}>• {section}</li>
-                    ))}
-                    {template.sections.length > 4 ? (
-                      <li className="text-xs text-ink-500">+ {template.sections.length - 4} additional sections</li>
-                    ) : null}
-                  </ul>
-                ) : (
-                  <p className="mt-4 text-sm text-ink-500">Blank start. Build your own section hierarchy.</p>
-                )}
+                  {/* Title */}
+                  <h2 className="text-base font-medium text-ink-900">{template.label}</h2>
 
-                <Button onClick={() => handleUseTemplate(key)} className="mt-5 w-full" variant="outline">
-                  Use template
-                </Button>
-              </article>
-            );
-          })}
+                  {/* Description */}
+                  <p className="text-sm text-ink-500 mt-1.5 line-clamp-2">{template.description}</p>
+
+                  {/* Sections preview */}
+                  <div className="mt-4 pt-3 border-t border-ink-100">
+                    {template.sections.length > 0 ? (
+                      <p className="text-xs text-ink-400 truncate">{sectionPreview}</p>
+                    ) : (
+                      <p className="text-xs text-ink-400">No predefined sections</p>
+                    )}
+                  </div>
+
+                  {/* Use template action */}
+                  <p className="mt-3 text-xs font-semibold text-brand-600 opacity-0 group-hover:opacity-100 transition-opacity">
+                    Use template →
+                  </p>
+                </article>
+              );
+            })}
+          </div>
+
         </div>
       </div>
 

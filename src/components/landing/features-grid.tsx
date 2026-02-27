@@ -3,177 +3,126 @@
 import { useRef } from "react";
 import { motion, useInView } from "framer-motion";
 import {
-  Atom,
-  BadgeCheck,
-  Blocks,
-  Bot,
-  ChartNetwork,
+  Sparkles,
+  BookOpen,
+  GitMerge,
+  BarChart3,
+  Search,
   FileCheck,
-  Microscope,
 } from "lucide-react";
-import { cn } from "@/lib/utils/cn";
 
 const features = [
   {
-    icon: Atom,
-    title: "Diffusion-speed drafting",
-    body: "Generate dense academic prose at interactive speed so your analysis loop stays uninterrupted.",
-    accent: "mercury" as const,
+    icon: Sparkles,
+    title: "AI-Powered Drafting",
+    description:
+      "Generate well-structured academic prose from outlines, notes, or prompts.",
   },
   {
-    icon: Blocks,
-    title: "128K whole-paper memory",
-    body: "Keep introduction, methods, results, and discussion in one context to maintain coherent terminology.",
-    accent: "brand" as const,
+    icon: BookOpen,
+    title: "Full-Document Awareness",
+    description:
+      "Your entire manuscript stays in context, ensuring consistent terminology and arguments.",
   },
   {
-    icon: Bot,
-    title: "Dual-model routing",
-    body: "mercury-2 handles synthesis and reasoning; mercury-edit handles deterministic inline refinement.",
-    accent: "mercury" as const,
+    icon: GitMerge,
+    title: "Smart Editing Modes",
+    description:
+      "Choose between broad rewrites and precise inline edits — the right AI model is selected automatically.",
   },
   {
-    icon: ChartNetwork,
-    title: "Argument structure feedback",
-    body: "Review sections for claim-evidence balance and logical progression before submission.",
-    accent: "brand" as const,
+    icon: BarChart3,
+    title: "Argument Analysis",
+    description:
+      "Get feedback on claim structure, evidence gaps, and logical flow across sections.",
   },
   {
-    icon: Microscope,
-    title: "Citation intelligence",
-    body: "Search and insert relevant literature directly in the writing surface with verifiable attribution.",
-    accent: "mercury" as const,
+    icon: Search,
+    title: "Citation Intelligence",
+    description:
+      "Search and insert references from Semantic Scholar directly in your writing.",
   },
   {
     icon: FileCheck,
-    title: "AI contribution log",
-    body: "Track generated and edited spans for journal policy compliance and transparent disclosure.",
-    accent: "brand" as const,
+    title: "Contribution Tracking",
+    description:
+      "Track AI-generated and human-edited spans for journal compliance and transparency.",
   },
 ];
 
-const quickFacts = [
-  ["Model endpoints", "/v1/chat, /v1/apply, /v1/fim"],
-  ["Primary writing modes", "Compose, Quick Edit, Review"],
-  ["Citation source", "Semantic Scholar API"],
-  ["Output formats", "DOCX, PDF, LaTeX, Markdown"],
-];
+const containerVariants = {
+  hidden: {},
+  visible: {
+    transition: { staggerChildren: 0.08 },
+  },
+};
+
+const cardVariants = {
+  hidden: { opacity: 0, y: 16 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.45 } },
+};
 
 function FeatureCard({
   title,
-  body,
+  description,
   icon: Icon,
-  accent,
-  index,
 }: {
   title: string;
-  body: string;
+  description: string;
   icon: React.ComponentType<{ className?: string }>;
-  accent: "mercury" | "brand";
-  index: number;
 }) {
-  const ref = useRef<HTMLDivElement>(null);
-  const inView = useInView(ref, { once: true, margin: "-60px" });
-
   return (
     <motion.article
-      ref={ref}
-      initial={{ opacity: 0, y: 20 }}
-      animate={inView ? { opacity: 1, y: 0 } : {}}
-      transition={{ duration: 0.45, delay: index * 0.06 }}
-      className={cn(
-        "group relative h-full rounded-2xl border p-5 shadow-sm transition duration-300",
-        accent === "mercury"
-          ? "border-mercury-200/60 bg-white hover:-translate-y-0.5 hover:border-mercury-300 hover:shadow-glow"
-          : "border-brand-200/60 bg-white hover:-translate-y-0.5 hover:border-brand-300 hover:shadow-glow-brand"
-      )}
+      variants={cardVariants}
+      className="group relative overflow-hidden rounded-2xl border border-ink-100 bg-white p-7 shadow-sm transition-all duration-300 hover:border-brand-200 hover:shadow-md"
     >
-      <div
-        className={cn(
-          "inline-flex h-10 w-10 items-center justify-center rounded-lg border",
-          accent === "mercury"
-            ? "border-mercury-200 bg-mercury-50 text-mercury-700"
-            : "border-brand-200 bg-brand-50 text-brand-700"
-        )}
-      >
-        <Icon className="h-5 w-5" />
-      </div>
+      {/* Hover gradient fill */}
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-brand-50/0 to-brand-50/0 opacity-0 transition-opacity duration-300 group-hover:opacity-100 group-hover:from-brand-50/60 group-hover:to-mercury-50/30" />
 
-      <h3 className="mt-4 text-lg font-semibold text-ink-900">{title}</h3>
-      <p className="mt-2 text-sm leading-relaxed text-ink-600">{body}</p>
+      <div className="relative">
+        <div className="mb-5 flex h-11 w-11 items-center justify-center rounded-xl border border-brand-100 bg-brand-50 transition-all duration-200 group-hover:border-brand-200 group-hover:bg-brand-100">
+          <Icon className="h-5 w-5 text-brand-600" />
+        </div>
+        <h3 className="text-base font-semibold text-ink-900">{title}</h3>
+        <p className="mt-2 text-sm leading-relaxed text-ink-500">
+          {description}
+        </p>
+      </div>
     </motion.article>
   );
 }
 
 export function FeaturesGrid() {
   const ref = useRef<HTMLElement>(null);
-  const inView = useInView(ref, { once: true, margin: "-100px" });
+  const inView = useInView(ref, { once: true, margin: "-80px" });
 
   return (
-    <section id="features" ref={ref} className="py-24 sm:py-32">
-      <div className="mx-auto grid w-full max-w-7xl gap-10 px-6 lg:grid-cols-[1.15fr_0.85fr] lg:px-8">
-        <div>
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={inView ? { opacity: 1, y: 0 } : {}}
-            transition={{ duration: 0.45 }}
-            className="max-w-2xl"
-          >
-            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-brand-700">
-              Core Capabilities
-            </p>
-            <h2 className="mt-4 font-serif text-4xl font-semibold leading-tight text-ink-950 sm:text-5xl">
-              Built for high-stakes research writing, not generic text generation
-            </h2>
-            <p className="mt-5 text-lg leading-relaxed text-ink-600">
-              Every interaction is engineered around the academic workflow: framing an argument, grounding it with
-              evidence, revising with precision, and preserving authorship transparency.
-            </p>
-          </motion.div>
-
-          <div className="mt-12 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-            {features.map((feature, index) => (
-              <FeatureCard key={feature.title} {...feature} index={index} />
-            ))}
-          </div>
+    <section id="features" ref={ref} className="bg-white py-28">
+      <div className="mx-auto max-w-6xl px-6">
+        {/* Section header */}
+        <div className="text-center">
+          <p className="mb-4 inline-flex items-center gap-1.5 rounded-full border border-brand-100 bg-brand-50 px-3.5 py-1.5 text-xs font-semibold uppercase tracking-wider text-brand-600">
+            Capabilities
+          </p>
+          <h2 className="font-serif text-3xl font-semibold text-ink-950 md:text-4xl lg:text-5xl">
+            Everything you need to write and publish
+          </h2>
+          <p className="mx-auto mt-5 max-w-2xl text-lg text-ink-500">
+            From first draft to final submission, ScribeX supports every stage
+            of the academic writing process.
+          </p>
         </div>
 
-        <motion.aside
-          initial={{ opacity: 0, x: 20 }}
-          animate={inView ? { opacity: 1, x: 0 } : {}}
-          transition={{ duration: 0.5, delay: 0.2 }}
-          className="h-fit rounded-[26px] border border-ink-200 bg-white/92 p-6 shadow-lg backdrop-blur-xl"
+        <motion.div
+          variants={containerVariants}
+          initial="hidden"
+          animate={inView ? "visible" : "hidden"}
+          className="mt-16 grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3"
         >
-          <div className="rounded-2xl border border-ink-200 bg-surface-secondary p-5">
-            <div className="flex items-center gap-2">
-              <BadgeCheck className="h-4 w-4 text-mercury-600" />
-              <p className="text-xs font-semibold uppercase tracking-[0.13em] text-ink-600">Academic Safety Rail</p>
-            </div>
-            <p className="mt-3 text-sm leading-relaxed text-ink-700">
-              ScribeX enforces citation caution, transparent AI attribution, and style-consistent drafting across the
-              full manuscript lifecycle.
-            </p>
-          </div>
-
-          <div className="mt-5 rounded-2xl border border-ink-200 bg-surface p-5">
-            <p className="text-sm font-semibold text-ink-900">Implementation snapshot</p>
-            <div className="mt-4 space-y-3">
-              {quickFacts.map(([key, value]) => (
-                <div key={key} className="grid grid-cols-[0.9fr_1.1fr] gap-3 border-b border-ink-200 pb-3 last:border-b-0 last:pb-0">
-                  <p className="text-xs uppercase tracking-[0.1em] text-ink-500">{key}</p>
-                  <p className="text-sm font-medium text-ink-800">{value}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="mt-5 rounded-2xl border border-mercury-200 bg-gradient-to-r from-mercury-50 to-brand-50 p-5">
-            <p className="text-xs uppercase tracking-[0.12em] text-mercury-800">Positioning</p>
-            <p className="mt-2 text-sm font-semibold text-ink-900">
-              &ldquo;Draft broad, refine surgically&rdquo; is the core product behavior surfaced directly in the UI.
-            </p>
-          </div>
-        </motion.aside>
+          {features.map((feature) => (
+            <FeatureCard key={feature.title} {...feature} />
+          ))}
+        </motion.div>
       </div>
     </section>
   );

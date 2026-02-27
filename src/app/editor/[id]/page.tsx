@@ -49,9 +49,7 @@ export default function EditorPage() {
 
   return (
     <JoinGate>
-      <div className="relative flex h-screen flex-col overflow-hidden bg-surface">
-        <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(circle_at_2%_0%,rgba(78,115,244,0.1),transparent_40%),radial-gradient(circle_at_98%_10%,rgba(34,190,154,0.1),transparent_38%)]" />
-
+      <div className="flex min-h-screen flex-col bg-ink-50">
         <EditorToolbar editor={editor} />
         <WritingModeBar />
 

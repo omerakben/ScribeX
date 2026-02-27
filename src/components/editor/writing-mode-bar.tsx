@@ -1,20 +1,17 @@
 "use client";
 
-import { Activity, X } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { routeToModel } from "@/lib/mercury/client";
+import { X } from "lucide-react";
 import { useEditorStore } from "@/lib/store/editor-store";
 import type { WritingMode } from "@/lib/types";
 
 const modeLabels: Record<WritingMode, string> = {
-  compose: "Compose",
-  autocomplete: "Autocomplete",
-  "quick-edit": "Quick Edit",
-  "deep-rewrite": "Deep Rewrite",
+  compose: "Composing",
+  autocomplete: "Autocompleting",
+  "quick-edit": "Quick Editing",
+  "deep-rewrite": "Deep Rewriting",
   "next-edit": "Next Edit",
-  review: "Review",
-  "diffusion-draft": "Diffusion Draft",
+  review: "Reviewing",
+  "diffusion-draft": "Drafting",
 };
 
 export function WritingModeBar() {
@@ -24,37 +21,26 @@ export function WritingModeBar() {
 
   if (!activeMode) return null;
 
-  const model = routeToModel(activeMode);
-
   return (
-    <div className="flex h-10 items-center justify-between border-b border-mercury-200/70 bg-gradient-to-r from-mercury-50 to-brand-50 px-4 text-sm">
-      <div className="inline-flex items-center gap-2.5">
+    <div className="flex h-8 flex-shrink-0 items-center justify-between border-b border-brand-100 bg-brand-50 px-4">
+      <div className="flex items-center gap-2">
         <span
-          className={`h-2.5 w-2.5 rounded-full bg-mercury-500 ${isStreaming ? "animate-pulse-glow" : ""}`}
+          className={`h-1.5 w-1.5 rounded-full bg-brand-600 ${isStreaming ? "animate-pulse" : ""}`}
           aria-hidden="true"
         />
-        <span className="font-semibold text-mercury-900">{modeLabels[activeMode]} active</span>
-        <Badge variant="mercury" className="border border-mercury-300 bg-white text-[10px] uppercase tracking-[0.1em]">
-          {model}
-        </Badge>
-        {isStreaming ? (
-          <span className="inline-flex items-center gap-1 text-xs font-medium text-mercury-800">
-            <Activity className="h-3.5 w-3.5" />
-            Streaming response
-          </span>
-        ) : null}
+        <span className="text-xs font-medium text-brand-700">
+          {modeLabels[activeMode]}
+        </span>
       </div>
 
-      <Button
-        variant="ghost"
-        size="sm"
-        className="h-7 px-2 text-xs"
+      <button
+        type="button"
         onClick={() => setActiveWritingMode(null)}
-        aria-label="Stop writing mode"
+        aria-label="Dismiss writing mode"
+        className="flex h-5 w-5 items-center justify-center text-brand-400 transition-colors hover:text-brand-600"
       >
         <X className="h-3.5 w-3.5" />
-        Dismiss
-      </Button>
+      </button>
     </div>
   );
 }

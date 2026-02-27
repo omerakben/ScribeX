@@ -23,9 +23,9 @@ const ibmPlexMono = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "ScribeX — Academic Writing at the Speed of Thought",
+  title: "ScribeX — Academic Writing Assistant",
   description:
-    "The first academic writing assistant powered by Mercury diffusion language models. 1,000+ tokens/second. Sub-second response times. Full-paper awareness.",
+    "An AI-powered academic writing assistant built on Mercury diffusion language models. Write, edit, and cite with speed and precision.",
   keywords: [
     "academic writing",
     "research assistant",
@@ -42,9 +42,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning className="scroll-smooth">
       <body
-        className={`${manrope.variable} ${newsreader.variable} ${ibmPlexMono.variable} font-sans antialiased`}
+        className={`${manrope.variable} ${newsreader.variable} ${ibmPlexMono.variable} font-sans bg-white text-ink-800 antialiased`}
       >
         {children}
         <ToasterProvider />

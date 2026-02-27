@@ -1,10 +1,9 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { BookMarked, ClipboardList, Trash2 } from "lucide-react";
+import { ClipboardList, Trash2 } from "lucide-react";
 import { TopBar } from "@/components/dashboard/top-bar";
 import { CitationSearch } from "@/components/editor/citation-search";
-import { Button } from "@/components/ui/button";
 import type { Citation } from "@/lib/types";
 
 export default function CitationsPage() {
@@ -23,65 +22,77 @@ export default function CitationsPage() {
     <>
       <TopBar
         title="Citations"
-        subtitle="Search literature, pin references, and prepare citation sets for writing sessions."
+        subtitle="Search and manage your references"
         showSearch={false}
       />
 
-      <div className="flex flex-1 min-h-0 flex-col overflow-auto px-5 pb-8 pt-6 lg:px-8">
-        <div className="grid min-h-0 flex-1 gap-5 xl:grid-cols-[1.1fr_0.9fr]">
-          <section className="min-h-0 rounded-2xl border border-ink-200 bg-white p-4 shadow-sm md:p-5">
-            <h2 className="text-lg font-semibold text-ink-950">Literature search</h2>
-            <p className="mt-1 text-sm text-ink-600">Powered by Semantic Scholar integration.</p>
-            <div className="mt-4 h-[560px] min-h-0">
-              <CitationSearch onInsert={handleInsert} />
-            </div>
-          </section>
+      <div className="flex flex-1 min-h-0 flex-col overflow-auto p-8">
+        <div className="max-w-6xl w-full mx-auto">
 
-          <aside className="rounded-2xl border border-ink-200 bg-white p-5 shadow-sm">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-ink-950">Reference queue</h2>
-              <span className="rounded-full bg-brand-100 px-2.5 py-1 text-xs font-semibold text-brand-700">
-                {totalCitations}
-              </span>
-            </div>
-            <p className="mt-1 text-sm text-ink-600">Saved citations can be inserted directly from the editor panel.</p>
+          {/* Two-column layout */}
+          <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6">
 
-            {library.length === 0 ? (
-              <div className="mt-10 rounded-2xl border border-ink-200 bg-surface-secondary px-4 py-8 text-center">
-                <BookMarked className="mx-auto h-7 w-7 text-ink-500" />
-                <p className="mt-3 text-sm font-semibold text-ink-900">No saved references yet</p>
-                <p className="mt-1 text-sm text-ink-500">Search and insert papers to build a working citation queue.</p>
+            {/* Left: Search card */}
+            <div className="bg-white border border-ink-200 rounded-xl p-6">
+              <h2 className="text-base font-semibold text-ink-900 mb-4">Search</h2>
+              <div className="h-[560px] min-h-0">
+                <CitationSearch onInsert={handleInsert} />
               </div>
-            ) : (
-              <div className="mt-4 space-y-3">
-                {library.map((citation) => (
-                  <article key={citation.paperId} className="rounded-xl border border-ink-200 bg-surface-secondary p-3">
-                    <p className="line-clamp-2 text-sm font-semibold text-ink-900">{citation.title}</p>
-                    <p className="mt-1 text-xs text-ink-600">
-                      {citation.authors[0]?.name ?? "Unknown"}
-                      {citation.year ? ` (${citation.year})` : ""}
-                    </p>
-                  </article>
-                ))}
-              </div>
-            )}
-
-            <div className="mt-5 flex gap-2">
-              <Button variant="outline" className="flex-1 gap-2" disabled={library.length === 0}>
-                <ClipboardList className="h-4 w-4" />
-                Export list
-              </Button>
-              <Button
-                variant="ghost"
-                className="gap-2"
-                disabled={library.length === 0}
-                onClick={() => setLibrary([])}
-              >
-                <Trash2 className="h-4 w-4" />
-                Clear
-              </Button>
             </div>
-          </aside>
+
+            {/* Right: Reference Queue card */}
+            <div className="bg-white border border-ink-200 rounded-xl p-6 flex flex-col">
+              <div className="flex items-center gap-2 mb-4">
+                <h2 className="text-base font-semibold text-ink-900">Reference Queue</h2>
+                <span className="bg-ink-100 text-ink-600 text-xs px-2 py-0.5 rounded-full">
+                  {totalCitations}
+                </span>
+              </div>
+
+              {library.length === 0 ? (
+                <div className="flex-1 flex items-center justify-center">
+                  <p className="text-sm text-ink-400 text-center py-8">No references saved yet</p>
+                </div>
+              ) : (
+                <div className="flex-1 overflow-auto space-y-3">
+                  {library.map((citation) => (
+                    <article
+                      key={citation.paperId}
+                      className="rounded-lg border border-ink-200 bg-ink-50 p-3"
+                    >
+                      <p className="line-clamp-2 text-sm text-ink-700 font-medium">{citation.title}</p>
+                      <p className="mt-1 text-xs text-ink-500">
+                        {citation.authors[0]?.name ?? "Unknown"}
+                        {citation.year ? ` (${citation.year})` : ""}
+                      </p>
+                    </article>
+                  ))}
+                </div>
+              )}
+
+              {/* Bottom actions */}
+              <div className="flex gap-2 mt-4 pt-4 border-t border-ink-100">
+                <button
+                  type="button"
+                  disabled={library.length === 0}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-ink-700 bg-white border border-ink-200 rounded-lg hover:border-ink-300 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  <ClipboardList className="h-3.5 w-3.5" />
+                  Export
+                </button>
+                <button
+                  type="button"
+                  disabled={library.length === 0}
+                  onClick={() => setLibrary([])}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-ink-500 hover:text-ink-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                  Clear
+                </button>
+              </div>
+            </div>
+
+          </div>
         </div>
       </div>
     </>
