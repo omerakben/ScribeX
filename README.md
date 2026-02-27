@@ -13,6 +13,11 @@
   <a href="https://tailwindcss.com"><img src="https://img.shields.io/badge/Tailwind_CSS-4-38bdf8?logo=tailwindcss&logoColor=white" alt="Tailwind CSS 4" /></a>
   <a href="https://tiptap.dev"><img src="https://img.shields.io/badge/TipTap-3-6C2BD9" alt="TipTap 3" /></a>
   <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-green.svg" alt="MIT License" /></a>
+  <a href="https://scribex-tuel-ai.vercel.app"><img src="https://img.shields.io/badge/Live_Demo-▶_Try_It-brand?logo=vercel&logoColor=white" alt="Live Demo" /></a>
+</p>
+
+<p align="center">
+  <a href="https://scribex-tuel-ai.vercel.app"><strong>Live Demo</strong></a> · <a href="#quick-start">Quick Start</a> · <a href="#feature-status">Features</a> · <a href="docs/architecture.md">Architecture</a>
 </p>
 
 ---
@@ -59,7 +64,7 @@ Edit `.env.local` with your API key:
 ```env
 INCEPTION_API_KEY=your_inception_api_key_here   # Required
 SEMANTIC_SCHOLAR_API_KEY=                        # Optional — increases rate limits
-NEXT_PUBLIC_APP_URL=http://localhost:3000
+NEXT_PUBLIC_APP_URL=http://localhost:3000        # Use your Vercel URL in production
 NEXT_PUBLIC_JOIN_CODE=                           # Leave empty to bypass access gate
 ```
 
@@ -296,7 +301,7 @@ ScribeX's value is the workflow layer on top: editor-native controls, writing-mo
   - [Platform docs](https://docs.inceptionlabs.ai/get-started/get-started)
   - [Models & pricing](https://docs.inceptionlabs.ai/get-started/models)
 - **[TUEL AI](https://tuel.ai/)** — Project context and publication track
-- Built by **[Omer Akben](https://omerakben.com/)** — [GitHub](https://github.com/omerakben/ScribeX)
+- Built by **[Omer Akben](https://omerakben.com/)** — [GitHub](https://github.com/omerakben/ScribeX) · [Live Demo](https://scribex-tuel-ai.vercel.app)
 
 ## License
 

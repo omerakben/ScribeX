@@ -140,9 +140,11 @@ Use this block in README/posts/blog:
 - Builder:
   - <https://omerakben.com/>
   - <https://github.com/omerakben/ScribeX>
+- Live demo: <https://scribex-tuel-ai.vercel.app>
 
 ## 7. Canonical Links
 
+- **Live demo**: <https://scribex-tuel-ai.vercel.app>
 - Inception homepage: <https://www.inceptionlabs.ai/>
 - Introducing Mercury 2: <https://www.inceptionlabs.ai/blog/introducing-mercury-2>
 - Inception docs get started: <https://docs.inceptionlabs.ai/get-started/get-started>
