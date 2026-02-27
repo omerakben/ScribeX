@@ -18,7 +18,7 @@ export function JoinGate({ children }: { children: React.ReactNode }) {
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
 
-    if (code.trim().toLowerCase() === JOIN_CODE?.toLowerCase()) {
+    if (code.trim().toLowerCase() === JOIN_CODE?.trim().toLowerCase()) {
       localStorage.setItem(STORAGE_KEY, "true");
       setManuallyJoined(true);
       setError(false);
