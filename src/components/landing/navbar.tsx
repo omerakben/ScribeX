@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
 import { Menu, X } from "lucide-react";
+import { SXLogo } from "@/components/shared/sx-logo";
 import { cn } from "@/lib/utils/cn";
 
 const navLinks = [
@@ -32,7 +33,10 @@ export function Navbar() {
       )}
     >
       <nav className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between px-6">
-        <Link href="/" className="flex items-center">
+        <Link href="/" className="flex items-center gap-2">
+          <div className="flex h-7 w-7 items-center justify-center rounded-lg overflow-hidden">
+            <SXLogo size={28} />
+          </div>
           <span
             className={cn(
               "font-serif text-xl font-semibold transition-colors duration-300",

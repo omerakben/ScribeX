@@ -1,0 +1,190 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000" width="100%" height="100%">
+  <defs>
+    <!-- Background Paper Gradient -->
+    <radialGradient id="bg-paper" cx="50%" cy="50%" r="75%">
+      <stop offset="0%" stop-color="#fdfcfb" />
+      <stop offset="60%" stop-color="#f2f0eb" />
+      <stop offset="100%" stop-color="#e0ddc8" />
+    </radialGradient>
+
+    <!-- Metallic/Graphite Gradients for 3D Shading -->
+    <linearGradient id="silver-lightest" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" />
+      <stop offset="100%" stop-color="#d4d4d4" />
+    </linearGradient>
+
+    <linearGradient id="silver-light" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#e8e8e8" />
+      <stop offset="100%" stop-color="#b0b0b0" />
+    </linearGradient>
+
+    <linearGradient id="silver-mid" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#c8c8c8" />
+      <stop offset="100%" stop-color="#7a7a7a" />
+    </linearGradient>
+
+    <linearGradient id="silver-dark" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#8c8c8c" />
+      <stop offset="100%" stop-color="#404040" />
+    </linearGradient>
+
+    <linearGradient id="silver-darkest" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#555555" />
+      <stop offset="100%" stop-color="#1a1a1a" />
+    </linearGradient>
+
+    <linearGradient id="s-front-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fafafa" />
+      <stop offset="45%" stop-color="#b8b8b8" />
+      <stop offset="55%" stop-color="#999999" />
+      <stop offset="100%" stop-color="#3d3d3d" />
+    </linearGradient>
+
+    <linearGradient id="nib-left-grad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#e2e2e2" />
+      <stop offset="100%" stop-color="#a0a0a0" />
+    </linearGradient>
+
+    <linearGradient id="nib-right-grad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#888888" />
+      <stop offset="100%" stop-color="#444444" />
+    </linearGradient>
+
+    <!-- Drop Shadow Filter -->
+    <filter id="drop-shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="20" dy="25" stdDeviation="12" flood-color="#000000" flood-opacity="0.35" />
+    </filter>
+
+    <!-- Inset Shadow Filter for 3D Volume -->
+    <filter id="inset-shadow">
+      <feOffset dx="-5" dy="-5"/>
+      <feGaussianBlur stdDeviation="15" result="offset-blur"/>
+      <feComposite operator="out" in="SourceGraphic" in2="offset-blur" result="inverse"/>
+      <feFlood flood-color="black" flood-opacity="0.5" result="color"/>
+      <feComposite operator="in" in="color" in2="inverse" result="shadow"/>
+      <feComposite operator="over" in="shadow" in2="SourceGraphic"/>
+    </filter>
+  </defs>
+
+  <!-- Canvas Background -->
+  <rect width="100%" height="100%" fill="url(#bg-paper)" />
+
+  <!-- Main Logo Group (Centered & Drop Shadowed) -->
+  <g transform="translate(75, 40) scale(0.95)" filter="url(#drop-shadow)">
+
+    <!-- ========================================== -->
+    <!-- 1. THE CHEVRON ('K'/'X' RIGHT ARM)         -->
+    <!-- ========================================== -->
+    <g id="Chevron">
+      <!-- 3D Extrusion (Shadow block) -->
+      <polygon points="700,150 720,170 540,420 520,400" fill="url(#silver-darkest)" />
+      <polygon points="520,400 540,420 720,670 700,650" fill="url(#silver-darkest)" />
+      <polygon points="620,650 700,650 720,670 640,670" fill="url(#silver-darkest)" />
+      <polygon points="420,400 440,420 640,670 620,650" fill="#111111" />
+
+      <!-- Outer Frame (Base) -->
+      <polygon points="620,150 420,400 620,650 700,650 520,400 700,150" fill="url(#silver-dark)" />
+
+      <!-- Inner Beveled Panels -->
+      <!-- Left Upper Bevel -->
+      <polygon points="620,150 420,400 450,400 630,170" fill="url(#silver-lightest)" />
+      <!-- Left Lower Bevel -->
+      <polygon points="420,400 620,650 630,630 450,400" fill="url(#silver-mid)" />
+      <!-- Right Upper Bevel -->
+      <polygon points="700,150 520,400 500,400 680,170" fill="url(#silver-mid)" />
+      <!-- Right Lower Bevel -->
+      <polygon points="520,400 700,650 680,630 500,400" fill="url(#silver-dark)" />
+      <!-- Top Cap Bevel -->
+      <polygon points="620,150 700,150 680,170 630,170" fill="url(#silver-light)" />
+      <!-- Bottom Cap Bevel -->
+      <polygon points="620,650 700,650 680,630 630,630" fill="url(#silver-darkest)" />
+
+      <!-- Inner Flat Channel -->
+      <polygon points="630,170 450,400 630,630 680,630 500,400 680,170" fill="url(#silver-mid)" filter="url(#inset-shadow)" />
+
+      <!-- Engraved Hatching Lines in Channel -->
+      <line x1="620" y1="200" x2="480" y2="380" stroke="#555" stroke-width="1.5" opacity="0.4" />
+      <line x1="640" y1="210" x2="490" y2="400" stroke="#555" stroke-width="1.5" opacity="0.4" />
+      <line x1="660" y1="220" x2="505" y2="415" stroke="#555" stroke-width="1.5" opacity="0.4" />
+      <line x1="480" y1="420" x2="620" y2="600" stroke="#555" stroke-width="1.5" opacity="0.4" />
+      <line x1="490" y1="400" x2="640" y2="590" stroke="#555" stroke-width="1.5" opacity="0.4" />
+      <line x1="505" y1="385" x2="660" y2="580" stroke="#555" stroke-width="1.5" opacity="0.4" />
+    </g>
+
+    <!-- ========================================== -->
+    <!-- 2. THE PEN NIB (BOTTOM LEFT)               -->
+    <!-- ========================================== -->
+    <g id="PenNib" transform="translate(10, -25) rotate(34 250 600) translate(250 600) scale(1.15) translate(-250 -600)">
+      <!-- Nib Extrusion/Shadow -->
+      <path d="M 180,450 Q 165,500 170,550 Q 180,650 250,750 Q 320,650 330,550 Q 335,500 320,450 Z"
+            fill="#111111" transform="translate(8, 12)" />
+
+      <!-- Nib Base Band / Barrel connection -->
+      <path d="M 180,450 Q 250,420 320,450 L 320,430 Q 250,400 180,430 Z" fill="url(#silver-darkest)" />
+
+      <!-- Left Tine -->
+      <path d="M 250,750 Q 180,650 170,550 Q 165,500 180,450 Q 215,435 250,435 L 250,585 A 15 15 0 0 0 235 600 A 15 15 0 0 0 250 615 Z"
+            fill="url(#nib-left-grad)" filter="url(#inset-shadow)"/>
+
+      <!-- Right Tine -->
+      <path d="M 250,750 Q 320,650 330,550 Q 335,500 320,450 Q 285,435 250,435 L 250,585 A 15 15 0 0 1 265 600 A 15 15 0 0 1 250 615 Z"
+            fill="url(#nib-right-grad)" filter="url(#inset-shadow)"/>
+
+      <!-- Breather Hole Center (Dark Void) -->
+      <circle cx="250" cy="600" r="14" fill="#0a0a0a" />
+      <circle cx="250" cy="600" r="14" fill="none" stroke="#666" stroke-width="1.5" />
+
+      <!-- The Slit -->
+      <line x1="250" y1="615" x2="250" y2="745" stroke="#0a0a0a" stroke-width="4" stroke-linecap="round" />
+
+      <!-- Engraved Accent Lines on Tines -->
+      <path d="M 195 470 Q 185 550 200 640 Q 220 700 240 730" fill="none" stroke="#777" stroke-width="2.5" opacity="0.6"/>
+      <path d="M 305 470 Q 315 550 300 640 Q 280 700 260 730" fill="none" stroke="#444" stroke-width="2.5" opacity="0.6"/>
+    </g>
+
+    <!-- ========================================== -->
+    <!-- 3. THE "S" RIBBON                          -->
+    <!-- ========================================== -->
+    <g id="SRibbon">
+      <!-- 3D Extrusion Body (Dark Drop-Block) -->
+      <path d="
+          M 420 180 L 480 140
+          C 400 50, 200 50, 120 220
+          C 100 350, 250 400, 380 450
+          C 500 500, 550 650, 420 780
+          C 350 850, 150 820, 120 700
+          C 180 750, 300 780, 380 660
+          C 420 580, 350 510, 250 470
+          C 120 420, 120 280, 200 180
+          C 250 120, 350 120, 420 180 Z"
+        fill="#181818" stroke="#181818" stroke-width="12" stroke-linejoin="round" transform="translate(18, 22)" />
+
+      <!-- Extrusion Connecting Wall (Top Right Angled Cut) -->
+      <polygon points="480,140 498,162 438,202 420,180" fill="#2a2a2a" />
+
+      <!-- Main Ribbon Front Face -->
+      <path id="s-main-face" d="
+          M 420 180 L 480 140
+          C 400 50, 200 50, 120 220
+          C 100 350, 250 400, 380 450
+          C 500 500, 550 650, 420 780
+          C 350 850, 150 820, 120 700
+          C 180 750, 300 780, 380 660
+          C 420 580, 350 510, 250 470
+          C 120 420, 120 280, 200 180
+          C 250 120, 350 120, 420 180 Z"
+        fill="url(#s-front-grad)" filter="url(#inset-shadow)" />
+
+      <!-- Sketch Contour Lines (Hatching emulation) -->
+      <path d="M 420 180 C 350 70, 150 70, 150 250 C 150 350, 250 400, 350 450 C 500 520, 500 650, 420 730 C 350 800, 180 780, 150 700"
+            fill="none" stroke="#666" stroke-width="2" opacity="0.3" />
+
+      <path d="M 435 185 C 365 85, 175 85, 175 250 C 175 340, 265 390, 365 440 C 495 510, 495 630, 435 710 C 375 770, 215 750, 185 700"
+            fill="none" stroke="#444" stroke-width="2" opacity="0.4" />
+
+      <path d="M 450 190 C 380 100, 200 100, 200 250 C 200 330, 280 380, 380 430 C 490 500, 490 610, 450 690 C 400 740, 250 720, 220 700"
+            fill="none" stroke="#222" stroke-width="2" opacity="0.3" />
+    </g>
+
+  </g>
+</svg>

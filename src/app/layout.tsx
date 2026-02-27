@@ -34,6 +34,13 @@ export const metadata: Metadata = {
     "paper writing",
     "citation management",
   ],
+  icons: {
+    icon: [
+      { url: "/SX-logo-mark.svg", type: "image/svg+xml" },
+      { url: "/favicon.ico", sizes: "32x32" },
+    ],
+    apple: "/apple-touch-icon.png",
+  },
 };
 
 export default function RootLayout({

@@ -1,6 +1,12 @@
 import { ACADEMIC_SYSTEM_PROMPT } from "@/lib/constants";
 import type { MercuryModel, MercuryMessage, ReasoningEffort, WritingMode } from "@/lib/types";
 
+function getJoinToken(): string {
+  const envCode = process.env.NEXT_PUBLIC_JOIN_CODE ?? "";
+  if (typeof window === "undefined") return envCode;
+  return localStorage.getItem("scribex-join-code") ?? envCode;
+}
+
 // ─── Mercury Client ────────────────────────────────────────────
 // Handles all communication with Inception Labs' Mercury API.
 // Uses server-side API routes to keep the API key secure.
@@ -45,7 +51,7 @@ export async function streamChatCompletion(
   try {
     const res = await fetch("/api/mercury", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", "x-join-token": getJoinToken() },
       body: JSON.stringify({
         endpoint: "chat",
         model: "mercury-2",
@@ -129,7 +135,7 @@ export async function structuredChatCompletion<T>(
 ): Promise<T> {
   const res = await fetch("/api/mercury", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", "x-join-token": getJoinToken() },
     body: JSON.stringify({
       endpoint: "chat",
       model: "mercury-2",
@@ -170,7 +176,7 @@ export async function applyEdit(
 ): Promise<string> {
   const res = await fetch("/api/mercury", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", "x-join-token": getJoinToken() },
     body: JSON.stringify({
       endpoint: "apply",
       model: "mercury-edit",
@@ -202,7 +208,7 @@ export async function fimCompletion(
 ): Promise<string> {
   const res = await fetch("/api/mercury", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", "x-join-token": getJoinToken() },
     body: JSON.stringify({
       endpoint: "fim",
       model: "mercury-edit",

@@ -34,6 +34,7 @@ import { cn } from "@/lib/utils/cn";
 import { useEditorStore } from "@/lib/store/editor-store";
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select";
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
+import { ExportDialog } from "@/components/export/export-dialog";
 import type { ReasoningEffort } from "@/lib/types";
 import type { Editor } from "@tiptap/react";
 
@@ -121,6 +122,7 @@ export function EditorToolbar({ editor, onSave }: EditorToolbarProps) {
   const diffusionEnabled = useEditorStore((s) => s.diffusionEnabled);
   const setDiffusionEnabled = useEditorStore((s) => s.setDiffusionEnabled);
 
+  const [exportOpen, setExportOpen] = useState(false);
   const [titleDrafts, setTitleDrafts] = useState<Record<string, string>>({});
   const title = currentPaper
     ? titleDrafts[currentPaper.id] ?? currentPaper.title
@@ -210,34 +212,24 @@ export function EditorToolbar({ editor, onSave }: EditorToolbarProps) {
             {wordCount.toLocaleString()} words
           </span>
 
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div>
-                  <Select
-                    value={reasoningEffort}
-                    onValueChange={(value) => setReasoningEffort(value as ReasoningEffort)}
-                  >
-                    <SelectTrigger
-                      className="h-7 w-[112px] border-ink-200 bg-white text-xs text-ink-600 shadow-none focus:ring-1 focus:ring-brand-500"
-                      aria-label="Reasoning effort"
-                    >
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="instant" className="text-xs">Instant</SelectItem>
-                      <SelectItem value="low" className="text-xs">Low</SelectItem>
-                      <SelectItem value="medium" className="text-xs">Medium</SelectItem>
-                      <SelectItem value="high" className="text-xs">High</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </TooltipTrigger>
-              <TooltipContent side="bottom">
-                Controls AI quality/speed tradeoff
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+          <Select
+            value={reasoningEffort}
+            onValueChange={(value) => setReasoningEffort(value as ReasoningEffort)}
+          >
+            <SelectTrigger
+              className="h-7 w-[112px] border-ink-200 bg-white text-xs text-ink-600 shadow-none focus:ring-1 focus:ring-brand-500"
+              aria-label="Reasoning effort: controls AI quality/speed tradeoff"
+              title="Controls AI quality/speed tradeoff"
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="instant" className="text-xs">Instant</SelectItem>
+              <SelectItem value="low" className="text-xs">Low</SelectItem>
+              <SelectItem value="medium" className="text-xs">Medium</SelectItem>
+              <SelectItem value="high" className="text-xs">High</SelectItem>
+            </SelectContent>
+          </Select>
 
           <TooltipProvider>
             <Tooltip>
@@ -304,11 +296,14 @@ export function EditorToolbar({ editor, onSave }: EditorToolbarProps) {
 
           <button
             type="button"
+            onClick={() => setExportOpen(true)}
             aria-label="Export paper"
             className="flex h-8 w-8 items-center justify-center rounded-lg text-ink-500 transition-colors hover:bg-ink-100"
           >
             <Download className="h-4 w-4" />
           </button>
+
+          <ExportDialog open={exportOpen} onOpenChange={setExportOpen} />
 
           <button
             type="button"

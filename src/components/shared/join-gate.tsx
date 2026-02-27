@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { PenLine } from "lucide-react";
+import { SXLogo } from "@/components/shared/sx-logo";
 
 const JOIN_CODE = process.env.NEXT_PUBLIC_JOIN_CODE;
 const STORAGE_KEY = "scribex-joined";
+const CODE_STORAGE_KEY = "scribex-join-code";
 
 export function JoinGate({ children }: { children: React.ReactNode }) {
   const [manuallyJoined, setManuallyJoined] = useState(false);
@@ -20,6 +21,7 @@ export function JoinGate({ children }: { children: React.ReactNode }) {
 
     if (code.trim().toLowerCase() === JOIN_CODE?.trim().toLowerCase()) {
       localStorage.setItem(STORAGE_KEY, "true");
+      localStorage.setItem(CODE_STORAGE_KEY, code.trim());
       setManuallyJoined(true);
       setError(false);
       return;
@@ -50,8 +52,8 @@ export function JoinGate({ children }: { children: React.ReactNode }) {
       >
         {/* Logo */}
         <div className="flex flex-col items-center mb-8">
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-brand-600 mb-4 shadow-md">
-            <PenLine className="h-6 w-6 text-white" />
+          <div className="flex h-14 w-14 items-center justify-center rounded-xl overflow-hidden mb-4 shadow-md">
+            <SXLogo size={56} />
           </div>
           <h1 className="font-serif text-2xl font-semibold text-ink-950">ScribeX</h1>
           <p className="mt-1.5 text-sm text-ink-400 text-center">

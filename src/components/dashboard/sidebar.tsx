@@ -6,9 +6,9 @@ import {
   BookOpen,
   FileText,
   Layout,
-  PenLine,
   Settings,
 } from "lucide-react";
+import { SXLogo } from "@/components/shared/sx-logo";
 import { cn } from "@/lib/utils/cn";
 import { PLAN_LIMITS } from "@/lib/constants";
 import type { PlanTier } from "@/lib/types";
@@ -52,8 +52,8 @@ export function Sidebar({ plan = "scholar", tokensUsedToday = 12_400 }: SidebarP
     <aside className="hidden h-full w-[220px] shrink-0 flex-col border-r border-ink-200 bg-white lg:flex">
       {/* Logo */}
       <div className="flex items-center gap-2.5 px-5 py-4 border-b border-ink-100">
-        <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-brand-600">
-          <PenLine className="h-3.5 w-3.5 text-white" />
+        <div className="flex h-7 w-7 items-center justify-center rounded-lg overflow-hidden">
+          <SXLogo size={28} />
         </div>
         <Link href="/dashboard" className="inline-block">
           <span className="font-serif text-base font-semibold text-ink-950">ScribeX</span>

@@ -30,7 +30,10 @@ export function CitationSearch({ styleId = "apa-7", onInsert }: CitationSearchPr
     setHasSearched(true);
 
     try {
+      const envCode = process.env.NEXT_PUBLIC_JOIN_CODE ?? "";
+      const joinToken = typeof window !== "undefined" ? (localStorage.getItem("scribex-join-code") ?? envCode) : envCode;
       const response = await fetch(`/api/citations?q=${encodeURIComponent(trimmed)}&limit=10`, {
+        headers: { "x-join-token": joinToken },
         signal: controller.signal,
       });
       if (!response.ok) throw new Error("Failed to fetch citations");

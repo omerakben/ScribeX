@@ -38,7 +38,7 @@ export interface Paper {
   status: PaperStatus;
   citationStyle: CitationStyleSelection;
   references: Citation[];
-  content: string; // TipTap JSON
+  content: string; // TipTap HTML string (serialized via editor.getHTML())
   wordCount: number;
   targetJournal?: string;
   field?: string;

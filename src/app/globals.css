@@ -688,3 +688,219 @@ body {
     animation: none;
   }
 }
+
+/* ══════════════════════════════════════════════
+   Print stylesheet — PDF export via window.print()
+   ══════════════════════════════════════════════ */
+@media print {
+  /* ── Page setup ── */
+  @page {
+    size: A4;
+    margin: 1in;
+  }
+
+  /* ── Hide ALL UI chrome ── */
+  /* Editor toolbar (header with border-b) */
+  header {
+    display: none !important;
+  }
+
+  /* Writing mode bar (border-b border-brand-100 bg-brand-50) */
+  /* AI panel sidebar — the second child in the flex row */
+  /* Slash command menu, diffusion overlay, ghost text */
+  /* Footer word/char count bar */
+  /* Radix dialog/overlay portals */
+  /* Any fixed/floating UI */
+  [data-radix-popper-content-wrapper],
+  [data-radix-portal],
+  [role="dialog"],
+  [data-state="open"],
+  .ghost-text {
+    display: none !important;
+  }
+
+  /* ── Reset body ── */
+  html, body {
+    background: white !important;
+    color: black !important;
+    font-family: "Newsreader", "Iowan Old Style", "Baskerville", serif;
+    height: auto !important;
+    overflow: visible !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* ── Unwrap flex containers so content flows naturally ── */
+  /* The main editor page wrapper: div.flex.h-screen.flex-col */
+  body > *,
+  body > * > *,
+  [data-nextjs-scroll-focus-boundary],
+  main,
+  section {
+    display: block !important;
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+    max-width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  /* ── Hide the AI panel (second child of the content flex row) ── */
+  /* The AI panel is an aside or div after the editor section */
+  .editor-scroll-area ~ * {
+    display: none !important;
+  }
+
+  /* Hide the editor footer (word/char count) */
+  .editor-scroll-area > footer {
+    display: none !important;
+  }
+
+  /* Hide the slash command menu and diffusion overlay inside editor */
+  .editor-scroll-area [role="listbox"],
+  .editor-scroll-area .fixed {
+    display: none !important;
+  }
+
+  /* ── Editor scroll area: unwrap for print ── */
+  .editor-scroll-area {
+    display: block !important;
+    overflow: visible !important;
+    background: white !important;
+    height: auto !important;
+    min-height: 0 !important;
+  }
+
+  /* Paper wrapper: remove max-width / padding constraints */
+  .editor-scroll-area > div {
+    max-width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+  }
+
+  /* The white paper card inside canvas */
+  .editor-scroll-area > div > div {
+    min-height: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    box-shadow: none !important;
+    background: white !important;
+  }
+
+  /* ── TipTap content typography ── */
+  .tiptap {
+    font-size: 12pt !important;
+    line-height: 1.6 !important;
+    color: black !important;
+    max-width: 100% !important;
+    font-family: "Newsreader", "Iowan Old Style", "Baskerville", serif !important;
+  }
+
+  .tiptap h1,
+  .tiptap h2,
+  .tiptap h3 {
+    color: black !important;
+    font-family: "Manrope", "Avenir Next", sans-serif !important;
+    page-break-after: avoid;
+  }
+
+  .tiptap h1 { font-size: 18pt !important; }
+  .tiptap h2 { font-size: 15pt !important; }
+  .tiptap h3 { font-size: 13pt !important; }
+
+  /* ── Page breaks ── */
+  .tiptap table,
+  .tiptap figure,
+  .tiptap img,
+  .tiptap pre,
+  .tiptap blockquote,
+  .mermaid-block {
+    page-break-inside: avoid;
+  }
+
+  /* ── Tables ── */
+  .tiptap table {
+    border-collapse: collapse;
+    width: 100%;
+  }
+
+  .tiptap th,
+  .tiptap td {
+    border: 1px solid #666;
+    padding: 6px 10px;
+    font-size: 10pt;
+  }
+
+  .tiptap th {
+    background: #f0f0f0 !important;
+    font-weight: 600;
+  }
+
+  /* ── Code blocks ── */
+  .tiptap pre {
+    background: #f5f5f5 !important;
+    color: black !important;
+    border: 1px solid #ddd;
+    font-size: 9pt !important;
+    page-break-inside: avoid;
+  }
+
+  .tiptap code {
+    background: #f0f0f0 !important;
+    color: black !important;
+  }
+
+  /* ── Blockquotes ── */
+  .tiptap blockquote {
+    border-left: 3px solid #333 !important;
+    color: #333 !important;
+  }
+
+  /* ── Links: show URL ── */
+  .tiptap a {
+    color: black !important;
+    text-decoration: underline;
+  }
+
+  .tiptap a[href^="http"]::after {
+    content: " (" attr(href) ")";
+    font-size: 9pt;
+    color: #555;
+    word-break: break-all;
+  }
+
+  /* ── Math: KaTeX renders fine in print ── */
+  .Tiptap-mathematics-render {
+    background: transparent !important;
+  }
+
+  .Tiptap-mathematics-editor {
+    display: none !important;
+  }
+
+  /* ── Mermaid: show SVG, hide edit controls ── */
+  .mermaid-block {
+    border: 1px solid #ddd !important;
+    background: white !important;
+  }
+
+  .mermaid-block__header {
+    display: none !important;
+  }
+
+  .mermaid-block__editor {
+    display: none !important;
+  }
+
+  .mermaid-block__error {
+    display: none !important;
+  }
+
+  /* ── Images ── */
+  .tiptap img {
+    max-width: 100% !important;
+    page-break-inside: avoid;
+  }
+}

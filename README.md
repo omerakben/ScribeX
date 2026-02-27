@@ -1,36 +1,303 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+<p align="center">
+  <img src="public/SX-logo.png" alt="ScribeX Logo" width="280" />
+</p>
 
-## Getting Started
+<p align="center">
+  <strong>AI-powered academic writing workspace built on Mercury diffusion models</strong>
+</p>
 
-First, run the development server:
+<p align="center">
+  <a href="https://nextjs.org"><img src="https://img.shields.io/badge/Next.js-16-black?logo=next.js" alt="Next.js 16" /></a>
+  <a href="https://react.dev"><img src="https://img.shields.io/badge/React-19-blue?logo=react" alt="React 19" /></a>
+  <a href="https://www.typescriptlang.org"><img src="https://img.shields.io/badge/TypeScript-5-3178c6?logo=typescript&logoColor=white" alt="TypeScript 5" /></a>
+  <a href="https://tailwindcss.com"><img src="https://img.shields.io/badge/Tailwind_CSS-4-38bdf8?logo=tailwindcss&logoColor=white" alt="Tailwind CSS 4" /></a>
+  <a href="https://tiptap.dev"><img src="https://img.shields.io/badge/TipTap-3-6C2BD9" alt="TipTap 3" /></a>
+  <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-green.svg" alt="MIT License" /></a>
+</p>
+
+---
+
+ScribeX combines a manuscript editor, writing-mode automation, citation search, multi-format export, and structured review workflows into one focused tool for researchers who need to move from rough draft to submission-ready writing with less friction.
+
+## Why This Tool Exists
+
+Academic writing is usually split across multiple tools — one for drafting, another for references, another for revision, and yet another for AI prompting. ScribeX pulls those loops into a single interface:
+
+- **Draft and revise** inside a TipTap editor with slash-command AI actions
+- **13 writing commands** — generate, expand, simplify, academic tone, outline, counter-argument, evidence, transitions, abstract, rewrite, diffusion draft, mermaid diagrams, and more
+- **Citation search** via Semantic Scholar with 6 citation style formats (APA-7, MLA-9, Chicago-17, IEEE, Harvard, Vancouver)
+- **Structured manuscript review** with scored category feedback via JSON schema output
+- **Export to 6 formats** — PDF, Word (DOCX), Markdown, HTML, BibTeX, and LaTeX
+- **Local-first persistence** with autosave, Cmd/Ctrl+S manual save, and localStorage hydration
+- **Diffusion drafting** — visualize Mercury's parallel denoising process as your draft takes shape
+
+## Screenshots
+
+|              Hero               |             Editor Commands             |                  Capabilities                  |
+| :-----------------------------: | :-------------------------------------: | :--------------------------------------------: |
+| ![Hero](public/images/hero.png) | ![Commands](public/images/commands.png) | ![Capabilities](public/images/capabilites.png) |
+
+## Quick Start
+
+### Prerequisites
+
+- [Node.js](https://nodejs.org/) 20+
+- [pnpm](https://pnpm.io/) 9+
+- An [Inception Labs](https://www.inceptionlabs.ai/) API key for Mercury
+
+### Setup
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+git clone https://github.com/omerakben/ScribeX.git
+cd ScribeX
+pnpm install
+cp .env.example .env.local
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Edit `.env.local` with your API key:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```env
+INCEPTION_API_KEY=your_inception_api_key_here   # Required
+SEMANTIC_SCHOLAR_API_KEY=                        # Optional — increases rate limits
+NEXT_PUBLIC_APP_URL=http://localhost:3000
+NEXT_PUBLIC_JOIN_CODE=                           # Leave empty to bypass access gate
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+pnpm dev
+```
 
-## Learn More
+Open [http://localhost:3000](http://localhost:3000).
 
-To learn more about Next.js, take a look at the following resources:
+## Tech Stack
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+| Layer      | Technology                                              |
+| ---------- | ------------------------------------------------------- |
+| Framework  | Next.js 16 (App Router)                                 |
+| Editor     | TipTap v3 + ProseMirror                                 |
+| AI Models  | Mercury 2 (reasoning) + Mercury Edit (FIM/apply)        |
+| State      | Zustand 5 with localStorage persistence                 |
+| Styling    | Tailwind CSS v4, shadcn/ui, Radix primitives            |
+| Citations  | Semantic Scholar API                                    |
+| Export     | html2pdf.js, docx, turndown, marked                     |
+| Animations | Framer Motion + CSS keyframes                           |
+| E2E Tests  | Playwright                                              |
+| Fonts      | Manrope (UI), Newsreader (editor), IBM Plex Mono (code) |
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Architecture
 
-## Deploy on Vercel
+```
+User ─→ EditorCanvas / AIPanel
+              │
+              ├─→ Mercury Client (src/lib/mercury/client.ts)
+              │         │
+              │         └─→ POST /api/mercury ──→ Inception Labs API
+              │              (chat / apply / fim / edit)
+              │
+              ├─→ GET /api/citations ──→ Semantic Scholar API
+              │
+              └─→ Zustand Stores ←──→ localStorage
+                   (scribex:editor / scribex:dashboard)
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- **Browser never calls Inception directly** — all AI requests proxy through `/api/mercury` which attaches the server-side `INCEPTION_API_KEY`
+- **Middleware** (`src/middleware.ts`) applies CSRF protection and rate limiting (60 req/min per IP) to all `/api/*` routes
+- **Mercury Client** routes writing modes to the correct model: `mercury-2` for generative work, `mercury-edit` for autocomplete/FIM and short edits
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Feature Status
+
+| Feature                                             | Status |
+| --------------------------------------------------- | ------ |
+| Mercury streaming + reasoning controls              | Done   |
+| Diffusion drafting with denoising overlay           | Done   |
+| Quick edit / deep rewrite modes                     | Done   |
+| FIM autocomplete ghost text (Tab to accept)         | Done   |
+| Structured manuscript review (JSON schema)          | Done   |
+| Citation search + style-aware insertion             | Done   |
+| 13 slash commands with model routing                | Done   |
+| 7 paper templates (IMRAD, lit review, thesis, etc.) | Done   |
+| Local persistence + autosave                        | Done   |
+| Export: PDF, DOCX, Markdown, HTML, BibTeX, LaTeX    | Done   |
+| Math (KaTeX) + Mermaid diagram support              | Done   |
+| Superscript / Subscript                             | Done   |
+| CSRF protection + rate limiting middleware          | Done   |
+| E2E test suite (10 Playwright specs)                | Done   |
+| Join-code access gate                               | Done   |
+
+### Known Constraints
+
+- Persistence is browser localStorage only — no server-backed database
+- Access gating uses a client-side join code, not full authentication
+- Plan/usage tier constants exist in code but are not enforced server-side
+- Rate limiting is in-memory (not suitable for multi-region deployment without Redis)
+
+## Usage Examples
+
+### Stream a Mercury chat completion
+
+```ts
+import { streamChatCompletion } from "@/lib/mercury/client";
+
+let output = "";
+
+await streamChatCompletion(
+  [{ role: "user", content: "Draft a concise IMRAD introduction on retrieval-augmented generation." }],
+  {
+    reasoningEffort: "high",
+    diffusing: false,
+    onChunk: (chunk) => { output += chunk; },
+    onDone: () => console.log("done", output),
+    onError: (error) => console.error(error),
+  }
+);
+```
+
+### Request structured review output
+
+```ts
+import { structuredChatCompletion } from "@/lib/mercury/client";
+import { REVIEW_JSON_SCHEMA } from "@/lib/constants";
+
+const review = await structuredChatCompletion<{
+  categories: { label: string; score: number; feedback: string }[];
+}>(
+  [{ role: "user", content: "Review this manuscript for argument quality and methodological clarity." }],
+  REVIEW_JSON_SCHEMA,
+  { reasoningEffort: "medium" }
+);
+```
+
+### Apply targeted edit
+
+```ts
+import { applyEdit } from "@/lib/mercury/client";
+
+const revised = await applyEdit(
+  "This paragraph has dense and repetitive phrasing.",
+  "Simplify while preserving academic tone and factual meaning."
+);
+```
+
+### FIM autocomplete
+
+```ts
+import { fimCompletion } from "@/lib/mercury/client";
+
+const suggestion = await fimCompletion(
+  "The results demonstrate that",
+  "under strict latency budgets."
+);
+```
+
+## API Routes
+
+### `POST /api/mercury`
+
+Server-side proxy to Inception API (`https://api.inceptionlabs.ai/v1`). API keys never reach the browser.
+
+```json
+{
+  "endpoint": "chat | apply | fim | edit",
+  "model": "mercury-2 | mercury-edit",
+  "...payload": "endpoint-specific fields"
+}
+```
+
+Endpoint mapping: `chat` → `/chat/completions`, `apply` → `/apply/completions`, `fim` → `/fim/completions`, `edit` → `/edit/completions`
+
+### `GET /api/citations`
+
+Queries Semantic Scholar and normalizes results into ScribeX citation format.
+
+| Param    | Required | Default |
+| -------- | -------- | ------- |
+| `q`      | Yes      | —       |
+| `limit`  | No       | `10`    |
+| `offset` | No       | `0`     |
+
+## Export Formats
+
+| Format   | Engine      | Notes                                                                                      |
+| -------- | ----------- | ------------------------------------------------------------------------------------------ |
+| PDF      | html2pdf.js | Inline CSS with hex colors (oklch incompatible with html2canvas); renders in hidden iframe |
+| DOCX     | docx        | Full DOM-to-docx with math (Cambria Math), tables, lists, TOC, header/footer               |
+| Markdown | turndown    | Custom rules for math, mermaid, super/subscript, GFM tables                                |
+| HTML     | Custom      | Standalone document with embedded CSS, Google Fonts, KaTeX CDN, print media queries        |
+| BibTeX   | Custom      | Entry type detection, author formatting, double-braced titles                              |
+| LaTeX    | Custom      | HTML-to-LaTeX via DOMParser; 12-package preamble; math passthrough                         |
+
+## Development
+
+```bash
+pnpm dev          # Start dev server
+pnpm build        # Production build
+pnpm lint         # ESLint
+npx tsc --noEmit  # Type-check
+```
+
+### E2E Tests
+
+```bash
+# Start dev server first, then in another terminal:
+npx playwright test                           # All specs
+npx playwright test e2e/04-editor-core.spec.ts  # Single spec
+npx playwright test --headed                  # With visible browser
+npx playwright show-report e2e/report         # View report
+```
+
+10 spec files covering: landing page, auth gate, dashboard, editor core, slash commands, AI features, citations, autocomplete, persistence, and editor extensions.
+
+## Project Structure
+
+```
+src/
+├── app/                    # Next.js App Router
+│   ├── api/mercury/        # Mercury API proxy route
+│   ├── api/citations/      # Semantic Scholar proxy route
+│   ├── dashboard/          # Paper management pages
+│   └── editor/[id]/        # Editor (dynamic route)
+├── components/
+│   ├── editor/             # TipTap editor, AI panel, toolbar, slash menu
+│   ├── dashboard/          # Sidebar, paper cards, new-paper dialog
+│   ├── export/             # Export format dialog
+│   ├── landing/            # Marketing page sections
+│   ├── shared/             # JoinGate, ToasterProvider
+│   └── ui/                 # shadcn/ui primitives (barrel export)
+├── hooks/                  # useHydration
+├── lib/
+│   ├── constants/          # System prompts, commands, templates, styles
+│   ├── export/             # 6 format handlers + sanitizer + utils
+│   ├── extensions/         # Custom TipTap: ghost-text, mermaid-block
+│   ├── mercury/            # Mercury API client wrapper
+│   ├── storage/            # localStorage helpers (SSR-safe)
+│   ├── store/              # Zustand stores (editor + dashboard)
+│   ├── types/              # TypeScript types
+│   └── utils/              # cn(), markdown-to-html
+├── middleware.ts            # CSRF + rate limiting for /api/*
+└── types/                  # Module declarations (html2pdf.js)
+```
+
+## Why Mercury and Diffusion Matter
+
+ScribeX wraps [Inception Labs'](https://www.inceptionlabs.ai/) Mercury model family using their OpenAI-compatible API surface.
+
+Based on Inception's official materials:
+
+- Mercury 2 is a diffusion-based reasoning model focused on high-speed production inference
+- The [Mercury 2 launch post](https://www.inceptionlabs.ai/blog/introducing-mercury-2) describes parallel refinement (instead of sequential token decoding), highlighting latency-oriented usage for coding, agentic pipelines, and real-time interaction
+- Inception's [platform docs](https://docs.inceptionlabs.ai/get-started/get-started) describe OpenAI-compatible endpoints, 128K chat context, reasoning effort controls, structured outputs, and editing endpoints (`fim`, `apply`, `edit`)
+
+ScribeX's value is the workflow layer on top: editor-native controls, writing-mode routing, diffusion UI, review schema integration, and citation-aware UX.
+
+## Acknowledgements
+
+- **[Inception Labs](https://www.inceptionlabs.ai/)** — Mercury and Mercury 2 models, API platform
+  - [Introducing Mercury 2](https://www.inceptionlabs.ai/blog/introducing-mercury-2)
+  - [Platform docs](https://docs.inceptionlabs.ai/get-started/get-started)
+  - [Models & pricing](https://docs.inceptionlabs.ai/get-started/models)
+- **[TUEL AI](https://tuel.ai/)** — Project context and publication track
+- Built by **[Omer Akben](https://omerakben.com/)** — [GitHub](https://github.com/omerakben/ScribeX)
+
+## License
+
+[MIT](LICENSE)

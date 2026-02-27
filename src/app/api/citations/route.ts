@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 const SEMANTIC_SCHOLAR_BASE = "https://api.semanticscholar.org/graph/v1";
 const API_KEY = process.env.SEMANTIC_SCHOLAR_API_KEY;
+const JOIN_CODE = process.env.NEXT_PUBLIC_JOIN_CODE?.trim();
 const CITATION_PROVIDER = "semantic-scholar" as const;
 
 function pickExternalId(paper: Record<string, unknown>): string {
@@ -24,14 +25,24 @@ function pickExternalId(paper: Record<string, unknown>): string {
 }
 
 export async function GET(req: NextRequest) {
+  // A) Join code auth
+  if (JOIN_CODE) {
+    const token = req.headers.get("x-join-token")?.trim();
+    if (!token || token.toLowerCase() !== JOIN_CODE.toLowerCase()) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+  }
+
   const { searchParams } = new URL(req.url);
   const query = searchParams.get("q");
-  const limit = searchParams.get("limit") ?? "10";
-  const offset = searchParams.get("offset") ?? "0";
 
   if (!query) {
     return NextResponse.json({ error: "Query parameter 'q' is required" }, { status: 400 });
   }
+
+  // B) Validate limit and offset
+  const limit = Math.max(1, Math.min(100, parseInt(searchParams.get("limit") ?? "10", 10) || 10));
+  const offset = Math.max(0, parseInt(searchParams.get("offset") ?? "0", 10) || 0);
 
   try {
     const fields = "paperId,title,authors,year,venue,abstract,externalIds,url,citationCount,isOpenAccess";
@@ -48,9 +59,12 @@ export async function GET(req: NextRequest) {
     const response = await fetch(url, { headers });
 
     if (!response.ok) {
-      const error = await response.text();
+      console.error("Semantic Scholar API error", {
+        status: response.status,
+        timestamp: new Date().toISOString(),
+      });
       return NextResponse.json(
-        { error: `Semantic Scholar API: ${response.status} - ${error}` },
+        { error: "Citation service error" },
         { status: response.status }
       );
     }

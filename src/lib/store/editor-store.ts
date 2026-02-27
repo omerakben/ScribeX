@@ -210,7 +210,7 @@ export const useEditorStore = create<EditorState>()(
         diffusionEnabled: state.diffusionEnabled,
         reasoningEffort: state.reasoningEffort,
       }),
-      migrate: (persisted, _version) => persisted as Record<string, unknown>,
+      migrate: (persisted) => persisted as Record<string, unknown>,
     }
   )
 );
@@ -249,7 +249,7 @@ export const useDashboardStore = create<DashboardState>()(
         selectedTemplate: state.selectedTemplate,
         selectedCitationStyle: state.selectedCitationStyle,
       }),
-      migrate: (persisted, _version) => persisted as Record<string, unknown>,
+      migrate: (persisted) => persisted as Record<string, unknown>,
     }
   )
 );

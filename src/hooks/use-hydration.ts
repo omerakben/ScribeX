@@ -5,6 +5,7 @@ import { useEditorStore, useDashboardStore } from "@/lib/store/editor-store";
 
 /** Trigger rehydration if not already hydrated (idempotent, HMR-safe). */
 function ensureRehydrated() {
+  if (typeof window === "undefined") return;
   if (!useEditorStore.persist.hasHydrated()) {
     useEditorStore.persist.rehydrate();
   }
