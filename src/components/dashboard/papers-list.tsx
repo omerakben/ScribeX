@@ -1,10 +1,10 @@
 "use client";
 
 import { useMemo } from "react";
-import { Plus, FileText } from "lucide-react";
 import { motion } from "framer-motion";
+import { Plus, SearchX, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useEditorStore, useDashboardStore } from "@/lib/store/editor-store";
+import { useDashboardStore, useEditorStore } from "@/lib/store/editor-store";
 import { PaperCard } from "@/components/dashboard/paper-card";
 
 interface PapersListProps {
@@ -15,75 +15,64 @@ export function PapersList({ onNewPaper }: PapersListProps) {
   const papers = useEditorStore((s) => s.papers);
   const searchQuery = useDashboardStore((s) => s.searchQuery);
 
-  const filteredPapers = useMemo(() => {
+  const filtered = useMemo(() => {
     if (!searchQuery.trim()) return papers;
-    const q = searchQuery.toLowerCase();
+
+    const query = searchQuery.toLowerCase();
     return papers.filter(
-      (p) =>
-        p.title.toLowerCase().includes(q) ||
-        p.field?.toLowerCase().includes(q) ||
-        p.targetJournal?.toLowerCase().includes(q)
+      (paper) =>
+        paper.title.toLowerCase().includes(query) ||
+        paper.field?.toLowerCase().includes(query) ||
+        paper.targetJournal?.toLowerCase().includes(query)
     );
   }, [papers, searchQuery]);
 
-  // Sort by most recently updated
-  const sortedPapers = useMemo(
+  const sorted = useMemo(
     () =>
-      [...filteredPapers].sort(
-        (a, b) =>
-          new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+      [...filtered].sort(
+        (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
       ),
-    [filteredPapers]
+    [filtered]
   );
 
   if (papers.length === 0) {
     return (
-      <div className="flex flex-1 items-center justify-center">
-        <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4 }}
-          className="mx-auto max-w-sm text-center"
-        >
-          <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-brand-50 dark:bg-brand-950">
-            <FileText className="h-8 w-8 text-brand-500" />
-          </div>
-          <h2 className="mb-2 text-lg font-semibold text-ink-900 dark:text-ink-100">
-            No papers yet
-          </h2>
-          <p className="mb-6 text-sm leading-relaxed text-ink-500 dark:text-ink-400">
-            Create your first paper and start writing with the power of Mercury
-            AI. Your papers are saved locally and ready whenever you are.
-          </p>
-          <Button onClick={onNewPaper}>
-            <Plus className="h-4 w-4" />
-            Create your first paper
-          </Button>
-        </motion.div>
-      </div>
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="mx-auto max-w-xl rounded-3xl border border-ink-200 bg-surface-secondary p-10 text-center"
+      >
+        <div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl border border-mercury-300 bg-mercury-50">
+          <Sparkles className="h-7 w-7 text-mercury-700" />
+        </div>
+        <h3 className="mt-5 text-2xl font-semibold text-ink-950">Start your first manuscript</h3>
+        <p className="mx-auto mt-3 max-w-md text-sm leading-relaxed text-ink-600">
+          Create a paper with template scaffolding, citation style defaults, and Mercury-powered drafting right away.
+        </p>
+        <Button onClick={onNewPaper} variant="mercury" className="mt-6 gap-2">
+          <Plus className="h-4 w-4" />
+          Create first paper
+        </Button>
+      </motion.div>
     );
   }
 
-  if (sortedPapers.length === 0 && searchQuery.trim()) {
+  if (sorted.length === 0) {
     return (
-      <div className="flex flex-1 items-center justify-center">
-        <div className="mx-auto max-w-sm text-center">
-          <p className="mb-1 text-sm font-medium text-ink-700 dark:text-ink-300">
-            No results found
-          </p>
-          <p className="text-sm text-ink-500 dark:text-ink-400">
-            No papers match &ldquo;{searchQuery}&rdquo;. Try a different search
-            term.
-          </p>
+      <div className="flex flex-col items-center justify-center py-16 text-center">
+        <div className="grid h-12 w-12 place-items-center rounded-xl border border-ink-200 bg-surface-secondary">
+          <SearchX className="h-6 w-6 text-ink-500" />
         </div>
+        <h3 className="mt-4 text-lg font-semibold text-ink-900">No matching papers</h3>
+        <p className="mt-2 text-sm text-ink-600">Try searching by field, title, or target journal.</p>
       </div>
     );
   }
 
   return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-      {sortedPapers.map((paper, i) => (
-        <PaperCard key={paper.id} paper={paper} index={i} />
+    <div className="grid gap-4 md:grid-cols-2 2xl:grid-cols-3">
+      {sorted.map((paper, index) => (
+        <PaperCard key={paper.id} paper={paper} index={index} />
       ))}
     </div>
   );

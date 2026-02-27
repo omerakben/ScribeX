@@ -2,25 +2,26 @@
 
 import { useCallback, useEffect, useRef } from "react";
 import { useEditor, EditorContent } from "@tiptap/react";
-import StarterKit from "@tiptap/starter-kit";
-import Placeholder from "@tiptap/extension-placeholder";
-import Heading from "@tiptap/extension-heading";
-import Highlight from "@tiptap/extension-highlight";
-import Typography from "@tiptap/extension-typography";
-import Underline from "@tiptap/extension-underline";
-import TextAlign from "@tiptap/extension-text-align";
-import { Table } from "@tiptap/extension-table";
-import TableRow from "@tiptap/extension-table-row";
-import TableCell from "@tiptap/extension-table-cell";
-import TableHeader from "@tiptap/extension-table-header";
-import Link from "@tiptap/extension-link";
-import Image from "@tiptap/extension-image";
-import HorizontalRule from "@tiptap/extension-horizontal-rule";
 import CharacterCount from "@tiptap/extension-character-count";
 import Color from "@tiptap/extension-color";
+import Heading from "@tiptap/extension-heading";
+import Highlight from "@tiptap/extension-highlight";
+import HorizontalRule from "@tiptap/extension-horizontal-rule";
+import Image from "@tiptap/extension-image";
+import Link from "@tiptap/extension-link";
+import Placeholder from "@tiptap/extension-placeholder";
+import StarterKit from "@tiptap/starter-kit";
+import TableCell from "@tiptap/extension-table-cell";
+import TableHeader from "@tiptap/extension-table-header";
+import TableRow from "@tiptap/extension-table-row";
+import { Table } from "@tiptap/extension-table";
+import TextAlign from "@tiptap/extension-text-align";
 import { TextStyle } from "@tiptap/extension-text-style";
+import Typography from "@tiptap/extension-typography";
+import Underline from "@tiptap/extension-underline";
+import { BookOpenText, Sparkles } from "lucide-react";
+import { applyEdit, streamChatCompletion } from "@/lib/mercury/client";
 import { useEditorStore } from "@/lib/store/editor-store";
-import { streamChatCompletion, applyEdit } from "@/lib/mercury/client";
 import { SlashCommandMenu } from "@/components/editor/slash-command-menu";
 import type { SlashCommand } from "@/lib/types";
 import type { Editor } from "@tiptap/react";
@@ -38,25 +39,22 @@ export function EditorCanvas({ onEditorReady }: EditorCanvasProps) {
   const setIsAIStreaming = useEditorStore((s) => s.setIsAIStreaming);
   const addAIMessage = useEditorStore((s) => s.addAIMessage);
   const updateLastAIMessage = useEditorStore((s) => s.updateLastAIMessage);
+
   const editorReadyRef = useRef(false);
 
   const editor = useEditor({
     immediatelyRender: false,
     extensions: [
-      StarterKit.configure({
-        heading: false,
-        horizontalRule: false,
-      }),
+      StarterKit.configure({ heading: false, horizontalRule: false }),
       Heading.configure({ levels: [1, 2, 3] }),
       Placeholder.configure({
-        placeholder: "Start writing, or press / for commands...",
+        placeholder:
+          "Begin your manuscript, or type / for actions like generate, simplify, citation lookup, and review...",
       }),
       Highlight.configure({ multicolor: true }),
       Typography,
       Underline,
-      TextAlign.configure({
-        types: ["heading", "paragraph"],
-      }),
+      TextAlign.configure({ types: ["heading", "paragraph"] }),
       Table.configure({ resizable: true }),
       TableRow,
       TableCell,
@@ -80,8 +78,7 @@ export function EditorCanvas({ onEditorReady }: EditorCanvasProps) {
     },
     onUpdate: ({ editor }) => {
       setIsDirty(true);
-      const words = editor.storage.characterCount.words();
-      setWordCount(words);
+      setWordCount(editor.storage.characterCount.words());
     },
     onSelectionUpdate: ({ editor }) => {
       const { from, to } = editor.state.selection;
@@ -94,18 +91,21 @@ export function EditorCanvas({ onEditorReady }: EditorCanvasProps) {
     },
   });
 
-  // Notify parent when editor is ready
   useEffect(() => {
-    if (editor && !editorReadyRef.current) {
-      editorReadyRef.current = true;
-      onEditorReady(editor);
-      // Set initial word count
-      const words = editor.storage.characterCount.words();
-      setWordCount(words);
-    }
+    if (!editor || editorReadyRef.current) return;
+
+    editorReadyRef.current = true;
+    onEditorReady(editor);
+    setWordCount(editor.storage.characterCount.words());
   }, [editor, onEditorReady, setWordCount]);
 
-  // Handle slash commands
+  useEffect(() => {
+    if (!editor) return;
+
+    const words = editor.storage.characterCount.words();
+    setWordCount(words);
+  }, [currentPaper?.id, editor, setWordCount]);
+
   const handleSlashCommand = useCallback(
     async (command: SlashCommand) => {
       if (!editor) return;
@@ -126,37 +126,36 @@ export function EditorCanvas({ onEditorReady }: EditorCanvasProps) {
 
           const prompts: Record<string, string> = {
             generate:
-              "Generate the next paragraph continuing from the current content. Maintain the same style and tone.",
+              "Generate the next section in an academic tone while maintaining manuscript consistency.",
             expand:
-              "Expand the current section with more detail, examples, and supporting evidence.",
+              "Expand the current section with richer detail, references, and methodological precision.",
             outline:
-              "Generate a detailed outline for the next section of this paper.",
+              "Generate an outline for the next section with clear subsection suggestions.",
             counter:
-              "Generate a thoughtful counter-argument to the main thesis presented.",
+              "Produce a rigorous counter-argument to the current thesis section.",
             evidence:
-              "Find and present supporting evidence for the claims made in this paper.",
+              "Surface supporting evidence suggestions for the current claims.",
             transition:
-              "Write a smooth transition paragraph connecting the current and next sections.",
+              "Write a transition that links the current section to the next one naturally.",
             abstract:
-              "Generate a concise, well-structured abstract summarizing this paper.",
+              "Draft a concise, publication-ready abstract based on the manuscript.",
           };
 
           let accumulated = "";
-          const assistantMsg = {
+          addAIMessage({
             id: crypto.randomUUID(),
-            role: "assistant" as const,
+            role: "assistant",
             content: "",
-            model: "mercury-2" as const,
+            model: "mercury-2",
             timestamp: new Date().toISOString(),
             isStreaming: true,
-          };
-          addAIMessage(assistantMsg);
+          });
 
           await streamChatCompletion(
             [
               {
                 role: "user",
-                content: `${prompts[command.action]}\n\nCurrent paper:\n${content}`,
+                content: `${prompts[command.action]}\n\nCurrent manuscript context:\n${content}`,
               },
             ],
             {
@@ -167,14 +166,8 @@ export function EditorCanvas({ onEditorReady }: EditorCanvasProps) {
               onDone: () => {
                 setIsAIStreaming(false);
                 setActiveWritingMode(null);
-                // Insert generated content at cursor
-                if (accumulated && editor) {
-                  editor
-                    .chain()
-                    .focus()
-                    .setTextSelection(from)
-                    .insertContent(accumulated)
-                    .run();
+                if (accumulated.trim()) {
+                  editor.chain().focus().setTextSelection(from).insertContent(accumulated).run();
                 }
               },
               onError: () => {
@@ -188,54 +181,48 @@ export function EditorCanvas({ onEditorReady }: EditorCanvasProps) {
 
         case "simplify":
         case "academic": {
-          // These work on selected text or current paragraph
           const { from: selFrom, to: selTo } = editor.state.selection;
-          let target: string;
-          let range: { from: number; to: number };
+          let target = "";
+          let range: { from: number; to: number } | null = null;
 
           if (selFrom !== selTo) {
             target = editor.state.doc.textBetween(selFrom, selTo, " ");
             range = { from: selFrom, to: selTo };
           } else {
-            // Get current paragraph
             const $pos = editor.state.doc.resolve(selFrom);
-            const parentStart = $pos.start($pos.depth);
-            const parentEnd = $pos.end($pos.depth);
-            target = editor.state.doc.textBetween(parentStart, parentEnd, " ");
-            range = { from: parentStart, to: parentEnd };
+            const paragraphStart = $pos.start($pos.depth);
+            const paragraphEnd = $pos.end($pos.depth);
+            target = editor.state.doc.textBetween(paragraphStart, paragraphEnd, " ");
+            range = { from: paragraphStart, to: paragraphEnd };
           }
 
-          if (!target.trim()) break;
+          if (!range || !target.trim()) return;
 
           setActiveWritingMode("quick-edit");
           setIsAIStreaming(true);
 
           const instruction =
             command.action === "simplify"
-              ? "Simplify this text while preserving meaning. Use clearer, shorter sentences."
-              : "Elevate this text to formal academic register. Use precise terminology and proper academic conventions.";
+              ? "Simplify this passage while preserving argument quality and factual meaning."
+              : "Rewrite this passage in formal academic register while preserving intent and claims.";
 
           try {
             const result = await applyEdit(target, instruction);
-            editor
-              .chain()
-              .focus()
-              .deleteRange(range)
-              .insertContentAt(range.from, result)
-              .run();
+            editor.chain().focus().deleteRange(range).insertContentAt(range.from, result).run();
           } catch {
-            // silently fail
+            // Keep editor stable if request fails.
           }
+
           setIsAIStreaming(false);
           setActiveWritingMode(null);
           break;
         }
 
         case "cite": {
-          // Open the citations tab in the AI panel
-          useEditorStore.getState().setAIPanelMode("citations");
-          if (!useEditorStore.getState().aiPanelOpen) {
-            useEditorStore.getState().toggleAIPanel();
+          const state = useEditorStore.getState();
+          state.setAIPanelMode("citations");
+          if (!state.aiPanelOpen) {
+            state.toggleAIPanel();
           }
           break;
         }
@@ -256,20 +243,33 @@ export function EditorCanvas({ onEditorReady }: EditorCanvasProps) {
   if (!editor) return null;
 
   return (
-    <div className="relative flex-1 overflow-y-auto editor-scroll-area">
-      <div className="max-w-[720px] mx-auto px-8 py-12">
-        <EditorContent editor={editor} />
-        <SlashCommandMenu editor={editor} onCommand={handleSlashCommand} />
+    <section className="editor-scroll-area relative flex min-w-0 flex-1 flex-col overflow-y-auto">
+      <div className="mx-auto w-full max-w-[1080px] px-4 pb-8 pt-8 lg:px-8">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-ink-200 bg-white/86 px-4 py-3 shadow-sm backdrop-blur">
+          <p className="inline-flex items-center gap-2 text-sm font-semibold text-ink-800">
+            <BookOpenText className="h-4 w-4 text-brand-600" />
+            {currentPaper?.title ?? "Untitled Paper"}
+          </p>
+          <p className="inline-flex items-center gap-2 text-xs text-ink-600">
+            <Sparkles className="h-3.5 w-3.5 text-mercury-600" />
+            Type <span className="rounded bg-ink-100 px-1.5 py-0.5 font-mono text-[11px]">/</span> for command palette
+          </p>
+        </div>
+
+        <div className="relative rounded-[26px] border border-ink-200 bg-white px-6 py-8 shadow-lg lg:px-12 lg:py-10">
+          <EditorContent editor={editor} />
+          <SlashCommandMenu editor={editor} onCommand={handleSlashCommand} />
+        </div>
       </div>
 
-      {/* Word count footer */}
-      <div className="sticky bottom-0 flex justify-end px-4 py-1.5 bg-surface/80 backdrop-blur-sm border-t border-ink-100 dark:bg-surface/80 dark:border-ink-800">
-        <span className="text-[11px] text-ink-400 tabular-nums">
-          {editor.storage.characterCount.words().toLocaleString()} words
-          {" / "}
-          {editor.storage.characterCount.characters().toLocaleString()} characters
-        </span>
-      </div>
-    </div>
+      <footer className="sticky bottom-0 border-t border-ink-200/70 bg-white/88 px-4 py-2 backdrop-blur lg:px-8">
+        <div className="mx-auto flex w-full max-w-[1080px] items-center justify-end">
+          <p className="text-[11px] text-ink-500 tabular-nums">
+            {editor.storage.characterCount.words().toLocaleString()} words / {" "}
+            {editor.storage.characterCount.characters().toLocaleString()} characters
+          </p>
+        </div>
+      </footer>
+    </section>
   );
 }

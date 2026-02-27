@@ -2,137 +2,92 @@
 
 import { useRef } from "react";
 import { motion, useInView } from "framer-motion";
-import { PenLine, Sparkles, Send } from "lucide-react";
+import { ArrowRight, BotMessageSquare, PenSquare, Rocket } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 
 const steps = [
   {
-    number: "01",
-    icon: PenLine,
-    title: "Write",
-    description:
-      "Start with any template — IMRAD, literature review, thesis chapter — or a blank page. Write naturally with smart autocomplete guiding your flow.",
-    visual: "Draft your ideas",
+    id: "01",
+    title: "Frame the manuscript",
+    icon: PenSquare,
+    detail:
+      "Pick a template, set citation style, and establish the argument scope with field and target-journal context.",
+    bullet: "Structured paper setup in under a minute",
   },
   {
-    number: "02",
-    icon: Sparkles,
-    title: "Mercury Refines",
-    description:
-      "Mercury's dual-model architecture kicks in. Use slash commands to generate, expand, simplify, or find citations. Mercury Edit handles surgical revisions in-place.",
-    visual: "AI-powered refinement",
+    id: "02",
+    title: "Co-write with Mercury",
+    icon: BotMessageSquare,
+    detail:
+      "Generate section drafts with mercury-2, then apply deterministic rewrites with mercury-edit without losing local voice.",
+    bullet: "Dual-model routing by task complexity",
   },
   {
-    number: "03",
-    icon: Send,
-    title: "Publish",
-    description:
-      "Export publication-ready manuscripts with proper formatting, verified citations, and full AI contribution tracking for journal compliance.",
-    visual: "Publication-ready output",
+    id: "03",
+    title: "Review and publish",
+    icon: Rocket,
+    detail:
+      "Run section-level feedback, tighten citations, and export a submission-ready artifact with contribution traceability.",
+    bullet: "Disclosure-ready output pipeline",
   },
 ];
 
-function StepCard({
-  step,
-  index,
-  isLast,
-}: {
-  step: (typeof steps)[number];
-  index: number;
-  isLast: boolean;
-}) {
-  const ref = useRef<HTMLDivElement>(null);
-  const inView = useInView(ref, { once: true, margin: "-60px" });
-
-  return (
-    <motion.div
-      ref={ref}
-      initial={{ opacity: 0, y: 32 }}
-      animate={inView ? { opacity: 1, y: 0 } : {}}
-      transition={{ duration: 0.5, delay: index * 0.2 }}
-      className="relative flex flex-col items-center text-center"
-    >
-      {/* Connector line (not on last) */}
-      {!isLast && (
-        <div className="pointer-events-none absolute left-1/2 top-10 hidden h-px w-full translate-x-[50%] lg:block">
-          <motion.div
-            className="h-px w-full bg-gradient-to-r from-mercury-400/60 to-mercury-400/0"
-            initial={{ scaleX: 0 }}
-            animate={inView ? { scaleX: 1 } : {}}
-            transition={{ duration: 0.8, delay: index * 0.2 + 0.3 }}
-            style={{ transformOrigin: "left" }}
-          />
-        </div>
-      )}
-
-      {/* Step number + icon circle */}
-      <div className="relative mb-6">
-        <div
-          className={cn(
-            "flex h-20 w-20 items-center justify-center rounded-2xl border-2",
-            index === 1
-              ? "border-mercury-400 bg-mercury-50 shadow-glow dark:border-mercury-600 dark:bg-mercury-900/30"
-              : "border-ink-200 bg-white dark:border-ink-700 dark:bg-ink-800"
-          )}
-        >
-          <step.icon
-            size={28}
-            className={cn(
-              index === 1
-                ? "text-mercury-600 dark:text-mercury-400"
-                : "text-brand-600 dark:text-brand-400"
-            )}
-          />
-        </div>
-        <span className="absolute -right-2 -top-2 flex h-7 w-7 items-center justify-center rounded-full bg-brand-600 text-xs font-bold text-white">
-          {step.number}
-        </span>
-      </div>
-
-      <h3 className="font-serif text-2xl font-bold text-ink-900 dark:text-ink-100">
-        {step.title}
-      </h3>
-      <p className="mt-3 max-w-xs text-sm leading-relaxed text-ink-600 dark:text-ink-400">
-        {step.description}
-      </p>
-    </motion.div>
-  );
-}
-
 export function HowItWorks() {
-  const sectionRef = useRef<HTMLElement>(null);
-  const inView = useInView(sectionRef, { once: true, margin: "-100px" });
+  const ref = useRef<HTMLElement>(null);
+  const inView = useInView(ref, { once: true, margin: "-100px" });
 
   return (
-    <section
-      id="how-it-works"
-      ref={sectionRef}
-      className="bg-white py-24 dark:bg-ink-900 sm:py-32"
-    >
-      <div className="mx-auto max-w-6xl px-6">
+    <section id="how-it-works" ref={ref} className="py-24 sm:py-32">
+      <div className="mx-auto w-full max-w-7xl px-6 lg:px-8">
         <motion.div
-          initial={{ opacity: 0, y: 24 }}
+          initial={{ opacity: 0, y: 20 }}
           animate={inView ? { opacity: 1, y: 0 } : {}}
-          transition={{ duration: 0.6 }}
-          className="text-center"
+          transition={{ duration: 0.5 }}
+          className="max-w-3xl"
         >
-          <h2 className="font-serif text-4xl font-bold tracking-tight text-ink-900 dark:text-ink-50 sm:text-5xl">
-            From draft to publication
+          <p className="text-xs font-semibold uppercase tracking-[0.13em] text-mercury-700">Workflow Design</p>
+          <h2 className="mt-4 font-serif text-4xl font-semibold leading-tight text-ink-950 sm:text-5xl">
+            A research-native loop from blank page to final submission
           </h2>
-          <p className="mx-auto mt-4 max-w-2xl text-lg text-ink-600 dark:text-ink-400">
-            A streamlined workflow powered by Mercury&apos;s dual-model
-            architecture — reasoning for generation, editing for refinement.
+          <p className="mt-5 text-lg leading-relaxed text-ink-600">
+            The product flow matches real academic behavior: rapid ideation, targeted revision, and explicit quality
+            checks before publication.
           </p>
         </motion.div>
 
-        <div className="mt-20 grid grid-cols-1 gap-16 lg:grid-cols-3 lg:gap-8">
-          {steps.map((step, i) => (
-            <StepCard
-              key={step.title}
-              step={step}
-              index={i}
-              isLast={i === steps.length - 1}
-            />
+        <div className="relative mt-14 grid gap-6 lg:grid-cols-3">
+          <div className="pointer-events-none absolute left-8 right-8 top-11 hidden h-px bg-gradient-to-r from-brand-300/10 via-brand-300/60 to-mercury-400/10 lg:block" />
+
+          {steps.map((step, index) => (
+            <motion.article
+              key={step.id}
+              initial={{ opacity: 0, y: 24 }}
+              animate={inView ? { opacity: 1, y: 0 } : {}}
+              transition={{ duration: 0.45, delay: index * 0.12 }}
+              className="relative rounded-2xl border border-ink-200 bg-white p-6 shadow-sm"
+            >
+              <div className="flex items-center justify-between">
+                <span className="font-mono text-xs font-semibold tracking-[0.12em] text-ink-500">STEP {step.id}</span>
+                <div
+                  className={cn(
+                    "grid h-10 w-10 place-items-center rounded-xl border",
+                    index === 1
+                      ? "border-mercury-300 bg-mercury-50 text-mercury-700"
+                      : "border-brand-200 bg-brand-50 text-brand-700"
+                  )}
+                >
+                  <step.icon className="h-5 w-5" />
+                </div>
+              </div>
+
+              <h3 className="mt-6 text-xl font-semibold text-ink-900">{step.title}</h3>
+              <p className="mt-3 text-sm leading-relaxed text-ink-600">{step.detail}</p>
+
+              <div className="mt-5 flex items-center gap-2 rounded-xl border border-ink-200 bg-surface-secondary px-3 py-2 text-xs font-medium text-ink-600">
+                <ArrowRight className="h-3.5 w-3.5 text-mercury-600" />
+                {step.bullet}
+              </div>
+            </motion.article>
           ))}
         </div>
       </div>

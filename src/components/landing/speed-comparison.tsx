@@ -1,237 +1,175 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion, useInView } from "framer-motion";
-import { Zap, Timer, Gauge } from "lucide-react";
+import { Gauge, TimerReset, Workflow, Zap } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 
-/* ─── Animated Counter ───────────────────────────────────────── */
-
-function AnimatedCounter({
-  target,
-  suffix = "",
-  duration = 2000,
-  className,
-}: {
-  target: number;
-  suffix?: string;
-  duration?: number;
-  className?: string;
-}) {
-  const [count, setCount] = useState(0);
+function Counter({ target, suffix, duration = 1500 }: { target: number; suffix?: string; duration?: number }) {
+  const [value, setValue] = useState(0);
   const ref = useRef<HTMLSpanElement>(null);
-  const inView = useInView(ref, { once: true, margin: "-100px" });
+  const inView = useInView(ref, { once: true });
 
   useEffect(() => {
     if (!inView) return;
 
-    const start = Date.now();
-    function tick() {
-      const elapsed = Date.now() - start;
-      const progress = Math.min(elapsed / duration, 1);
-      // Ease-out curve
+    let raf = 0;
+    const start = performance.now();
+
+    const tick = (now: number) => {
+      const progress = Math.min((now - start) / duration, 1);
       const eased = 1 - Math.pow(1 - progress, 3);
-      setCount(Math.round(eased * target));
-      if (progress < 1) requestAnimationFrame(tick);
-    }
-    requestAnimationFrame(tick);
+      setValue(Math.round(target * eased));
+      if (progress < 1) raf = requestAnimationFrame(tick);
+    };
+
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
   }, [inView, target, duration]);
 
   return (
-    <span ref={ref} className={className}>
-      {count.toLocaleString()}
+    <span ref={ref}>
+      {value.toLocaleString()}
       {suffix}
     </span>
   );
 }
 
-/* ─── Speed Bar ──────────────────────────────────────────────── */
-
-interface SpeedBarProps {
+function BenchRow({
+  label,
+  speed,
+  max,
+  primary,
+  delay,
+}: {
   label: string;
   speed: number;
-  maxSpeed: number;
-  color: "mercury" | "neutral";
+  max: number;
+  primary?: boolean;
   delay?: number;
-}
-
-function SpeedBar({ label, speed, maxSpeed, color, delay = 0 }: SpeedBarProps) {
+}) {
   const ref = useRef<HTMLDivElement>(null);
-  const inView = useInView(ref, { once: true, margin: "-80px" });
-  const pct = (speed / maxSpeed) * 100;
+  const inView = useInView(ref, { once: true, margin: "-70px" });
+  const pct = Math.min((speed / max) * 100, 100);
 
   return (
     <div ref={ref} className="space-y-2">
-      <div className="flex items-end justify-between">
-        <span className="text-sm font-medium text-ink-700 dark:text-ink-300">
-          {label}
-        </span>
-        <span
-          className={cn(
-            "font-mono text-2xl font-bold tabular-nums",
-            color === "mercury"
-              ? "text-mercury-600 dark:text-mercury-400"
-              : "text-ink-500 dark:text-ink-500"
-          )}
-        >
-          {inView ? (
-            <AnimatedCounter
-              target={speed}
-              suffix=" tok/s"
-              duration={1600 + delay}
-            />
-          ) : (
-            <>0 tok/s</>
-          )}
-        </span>
+      <div className="flex items-end justify-between gap-2">
+        <p className={cn("text-sm", primary ? "font-semibold text-ink-100" : "text-ink-400")}>{label}</p>
+        <p className={cn("font-mono text-2xl font-semibold tabular-nums", primary ? "text-mercury-300" : "text-ink-300")}>
+          {inView ? <Counter target={speed} suffix=" tok/s" duration={1400 + (delay ?? 0)} /> : "0 tok/s"}
+        </p>
       </div>
-      <div className="h-4 w-full overflow-hidden rounded-full bg-ink-100 dark:bg-ink-800">
+
+      <div className="h-3 rounded-full bg-white/12">
         <motion.div
-          className={cn(
-            "h-full rounded-full",
-            color === "mercury"
-              ? "bg-gradient-to-r from-mercury-500 to-mercury-400 shadow-[0_0_12px_rgba(32,201,151,0.4)]"
-              : "bg-ink-400 dark:bg-ink-600"
-          )}
           initial={{ width: 0 }}
           animate={inView ? { width: `${pct}%` } : { width: 0 }}
-          transition={{
-            duration: 1.2,
-            delay: delay / 1000,
-            ease: [0.25, 0.1, 0.25, 1],
-          }}
+          transition={{ duration: 1, delay: (delay ?? 0) / 1000 }}
+          className={cn(
+            "h-full rounded-full",
+            primary
+              ? "bg-gradient-to-r from-mercury-400 to-mercury-300 shadow-[0_0_18px_rgba(61,226,188,0.35)]"
+              : "bg-ink-300/60"
+          )}
         />
       </div>
     </div>
   );
 }
 
-/* ─── Speed Comparison Section ───────────────────────────────── */
+const statCards = [
+  {
+    icon: Zap,
+    value: 1009,
+    suffix: "+",
+    title: "Peak generation throughput",
+    detail: "Parallel diffusion decoding benchmark",
+  },
+  {
+    icon: TimerReset,
+    value: 1700,
+    suffix: "ms",
+    title: "End-to-end latency",
+    detail: "Typical response loop for drafting tasks",
+  },
+  {
+    icon: Workflow,
+    value: 128,
+    suffix: "K",
+    title: "Context window",
+    detail: "Whole-document conditioning",
+  },
+];
 
 export function SpeedComparison() {
-  const sectionRef = useRef<HTMLElement>(null);
-  const inView = useInView(sectionRef, { once: true, margin: "-100px" });
+  const ref = useRef<HTMLElement>(null);
+  const inView = useInView(ref, { once: true, margin: "-100px" });
 
   return (
-    <section
-      id="speed"
-      ref={sectionRef}
-      className="relative bg-ink-950 py-24 text-white sm:py-32"
-    >
-      {/* Glow accent */}
-      <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute left-1/4 top-1/2 h-[400px] w-[400px] -translate-y-1/2 rounded-full bg-mercury-600/10 blur-3xl" />
+    <section id="speed" ref={ref} className="relative overflow-hidden py-24 sm:py-32">
+      <div className="absolute inset-0 -z-10 bg-ink-950" />
+      <div className="pointer-events-none absolute inset-0 -z-10">
+        <div className="absolute left-[16%] top-[18%] h-72 w-72 rounded-full bg-mercury-500/16 blur-3xl" />
+        <div className="absolute right-[12%] top-[26%] h-64 w-64 rounded-full bg-brand-500/20 blur-3xl" />
       </div>
 
-      <div className="relative mx-auto max-w-6xl px-6">
+      <div className="mx-auto grid w-full max-w-7xl gap-10 px-6 lg:grid-cols-[0.98fr_1.02fr] lg:px-8">
         <motion.div
-          initial={{ opacity: 0, y: 24 }}
+          initial={{ opacity: 0, y: 20 }}
           animate={inView ? { opacity: 1, y: 0 } : {}}
-          transition={{ duration: 0.6 }}
-          className="text-center"
+          transition={{ duration: 0.5 }}
         >
-          <div className="inline-flex items-center gap-2 rounded-full border border-mercury-600/30 bg-mercury-900/30 px-4 py-1.5">
-            <Zap size={14} className="text-mercury-400" />
-            <span className="text-sm font-medium text-mercury-300">
-              10x Faster Than GPT
-            </span>
-          </div>
-
-          <h2 className="mt-6 font-serif text-4xl font-bold tracking-tight text-white sm:text-5xl">
-            Speed that changes everything
-          </h2>
-          <p className="mx-auto mt-4 max-w-2xl text-lg text-ink-400">
-            Mercury&apos;s diffusion architecture generates all tokens in
-            parallel, not one at a time. The result? Writing assistance that
-            feels instantaneous.
+          <p className="inline-flex items-center gap-2 rounded-full border border-mercury-500/30 bg-mercury-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.12em] text-mercury-200">
+            <Gauge className="h-3.5 w-3.5" />
+            Live benchmark profile
           </p>
+
+          <h2 className="mt-6 font-serif text-4xl font-semibold leading-tight text-white sm:text-5xl">
+            Throughput that keeps up with academic iteration
+          </h2>
+          <p className="mt-5 max-w-xl text-lg leading-relaxed text-ink-300">
+            The interface is tuned for fast loops: generate, inspect, revise, and continue without waiting for a
+            token-by-token stream to complete.
+          </p>
+
+          <div className="mt-10 space-y-5 rounded-2xl border border-white/15 bg-white/[0.04] p-6 backdrop-blur-sm">
+            <BenchRow label="Mercury 2 (ScribeX)" speed={1009} max={1100} primary />
+            <BenchRow label="GPT-4o" speed={110} max={1100} delay={150} />
+            <BenchRow label="Claude 3.5 Sonnet" speed={90} max={1100} delay={300} />
+            <BenchRow label="Gemini 1.5 Pro" speed={85} max={1100} delay={450} />
+          </div>
         </motion.div>
 
-        {/* Bar chart comparison */}
         <motion.div
-          initial={{ opacity: 0, y: 32 }}
+          initial={{ opacity: 0, y: 20 }}
           animate={inView ? { opacity: 1, y: 0 } : {}}
-          transition={{ duration: 0.6, delay: 0.2 }}
-          className="mx-auto mt-16 max-w-2xl space-y-8"
+          transition={{ duration: 0.5, delay: 0.16 }}
+          className="space-y-4"
         >
-          <SpeedBar
-            label="Mercury dLLM (ScribeX)"
-            speed={1050}
-            maxSpeed={1100}
-            color="mercury"
-            delay={0}
-          />
-          <SpeedBar
-            label="GPT-4o"
-            speed={110}
-            maxSpeed={1100}
-            color="neutral"
-            delay={200}
-          />
-          <SpeedBar
-            label="Claude 3.5 Sonnet"
-            speed={90}
-            maxSpeed={1100}
-            color="neutral"
-            delay={400}
-          />
-          <SpeedBar
-            label="Gemini 1.5 Pro"
-            speed={85}
-            maxSpeed={1100}
-            color="neutral"
-            delay={600}
-          />
-        </motion.div>
-
-        {/* Stats row */}
-        <motion.div
-          initial={{ opacity: 0, y: 24 }}
-          animate={inView ? { opacity: 1, y: 0 } : {}}
-          transition={{ duration: 0.6, delay: 0.5 }}
-          className="mx-auto mt-20 grid max-w-3xl grid-cols-1 gap-8 sm:grid-cols-3"
-        >
-          {[
-            {
-              icon: Zap,
-              value: 1050,
-              suffix: "+",
-              label: "Tokens per second",
-            },
-            {
-              icon: Timer,
-              value: 200,
-              suffix: "ms",
-              label: "Average response time",
-            },
-            {
-              icon: Gauge,
-              value: 128,
-              suffix: "K",
-              label: "Context window (tokens)",
-            },
-          ].map((stat) => (
-            <div key={stat.label} className="text-center">
-              <stat.icon
-                size={20}
-                className="mx-auto mb-3 text-mercury-400"
-              />
-              <div className="font-mono text-3xl font-bold text-white">
-                {inView ? (
-                  <AnimatedCounter
-                    target={stat.value}
-                    suffix={stat.suffix}
-                    duration={1800}
-                  />
-                ) : (
-                  <>
-                    0{stat.suffix}
-                  </>
-                )}
+          {statCards.map((stat, index) => (
+            <div
+              key={stat.title}
+              className="rounded-2xl border border-white/14 bg-white/[0.05] p-5 shadow-xl backdrop-blur-sm"
+            >
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-semibold text-white">{stat.title}</p>
+                <stat.icon className="h-5 w-5 text-mercury-300" />
               </div>
-              <div className="mt-1 text-sm text-ink-500">{stat.label}</div>
+              <p className="mt-3 font-mono text-4xl font-semibold text-mercury-200 tabular-nums">
+                {inView ? <Counter target={stat.value} suffix={stat.suffix} duration={1650 + index * 120} /> : `0${stat.suffix}`}
+              </p>
+              <p className="mt-2 text-sm text-ink-300">{stat.detail}</p>
             </div>
           ))}
+
+          <div className="rounded-2xl border border-mercury-500/35 bg-mercury-500/12 p-5">
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-mercury-200">UX implication</p>
+            <p className="mt-2 text-sm leading-relaxed text-mercury-100">
+              No blocking spinner walls. ScribeX prioritizes immediate insertion and incremental refinement to protect
+              researcher flow-state.
+            </p>
+          </div>
         </motion.div>
       </div>
     </section>

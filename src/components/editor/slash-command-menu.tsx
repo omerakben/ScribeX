@@ -165,12 +165,17 @@ export function SlashCommandMenu({ editor, onCommand }: SlashCommandMenuProps) {
   return (
     <div
       ref={menuRef}
-      className="absolute z-50 w-72 rounded-lg border border-ink-200 bg-surface-elevated shadow-lg overflow-hidden animate-scale-in dark:border-ink-700"
+      className="absolute z-50 w-80 overflow-hidden rounded-2xl border border-ink-200 bg-white shadow-xl animate-scale-in"
       style={{ top: position.top, left: position.left }}
       role="listbox"
       aria-label="Slash commands"
     >
-      <div className="p-1.5 max-h-80 overflow-y-auto">
+      <div className="border-b border-ink-200 bg-surface-secondary px-3 py-2">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-ink-500">
+          Mercury commands
+        </p>
+      </div>
+      <div className="max-h-80 overflow-y-auto p-2">
         {filtered.map((cmd, index) => {
           const Icon = ICON_MAP[cmd.icon] ?? Sparkles;
           return (
@@ -179,15 +184,15 @@ export function SlashCommandMenu({ editor, onCommand }: SlashCommandMenuProps) {
               role="option"
               aria-selected={index === selectedIndex}
               className={cn(
-                "flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-left text-sm transition-colors",
+                "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm transition-colors",
                 index === selectedIndex
-                  ? "bg-brand-50 text-brand-700 dark:bg-brand-950 dark:text-brand-300"
-                  : "text-ink-700 hover:bg-ink-50 dark:text-ink-300 dark:hover:bg-ink-800"
+                  ? "bg-brand-50 text-brand-700"
+                  : "text-ink-700 hover:bg-surface-secondary"
               )}
               onClick={() => executeCommand(cmd)}
               onMouseEnter={() => setSelectedIndex(index)}
             >
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-ink-100 dark:bg-ink-800">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-ink-200 bg-white">
                 <Icon className="h-4 w-4" />
               </div>
               <div className="flex-1 min-w-0">
@@ -196,7 +201,7 @@ export function SlashCommandMenu({ editor, onCommand }: SlashCommandMenuProps) {
                   {cmd.description}
                 </div>
               </div>
-              <span className="shrink-0 text-[10px] font-medium px-1.5 py-0.5 rounded bg-mercury-100 text-mercury-700 dark:bg-mercury-900/30 dark:text-mercury-400">
+              <span className="shrink-0 rounded border border-mercury-200 bg-mercury-50 px-1.5 py-0.5 text-[10px] font-medium text-mercury-700">
                 {cmd.model === "mercury-2" ? "M2" : "ME"}
               </span>
             </button>

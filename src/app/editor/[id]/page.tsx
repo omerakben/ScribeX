@@ -13,18 +13,22 @@ import type { Editor } from "@tiptap/react";
 export default function EditorPage() {
   const params = useParams();
   const paperId = params.id as string;
+
   const currentPaper = useEditorStore((s) => s.currentPaper);
-  const setCurrentPaper = useEditorStore((s) => s.setCurrentPaper);
   const papers = useEditorStore((s) => s.papers);
+  const setCurrentPaper = useEditorStore((s) => s.setCurrentPaper);
+
   const [editor, setEditor] = useState<Editor | null>(null);
 
-  // Load paper from store by ID
   useEffect(() => {
-    const paper = papers.find((p) => p.id === paperId);
+    const paper = papers.find((entry) => entry.id === paperId);
+
     if (paper) {
       setCurrentPaper(paper);
-    } else if (!currentPaper) {
-      // Create a default paper for development/empty state
+      return;
+    }
+
+    if (!currentPaper) {
       setCurrentPaper({
         id: paperId,
         title: "Untitled Paper",
@@ -39,17 +43,19 @@ export default function EditorPage() {
     }
   }, [paperId, papers, currentPaper, setCurrentPaper]);
 
-  const handleEditorReady = useCallback((editorInstance: Editor) => {
-    setEditor(editorInstance);
+  const handleEditorReady = useCallback((instance: Editor) => {
+    setEditor(instance);
   }, []);
 
   return (
     <JoinGate>
-      <div className="flex flex-col h-screen bg-surface">
+      <div className="relative flex h-screen flex-col overflow-hidden bg-surface">
+        <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(circle_at_2%_0%,rgba(78,115,244,0.1),transparent_40%),radial-gradient(circle_at_98%_10%,rgba(34,190,154,0.1),transparent_38%)]" />
+
         <EditorToolbar editor={editor} />
         <WritingModeBar />
 
-        <div className="flex flex-1 min-h-0">
+        <div className="flex min-h-0 flex-1">
           <EditorCanvas onEditorReady={handleEditorReady} />
           <AIPanel editor={editor} />
         </div>

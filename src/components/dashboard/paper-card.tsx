@@ -1,67 +1,46 @@
 "use client";
 
+import { useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import {
-  MoreHorizontal,
-  ExternalLink,
-  Copy,
-  Download,
-  Trash2,
-} from "lucide-react";
+import { Copy, Download, ExternalLink, MoreHorizontal, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { PAPER_TEMPLATES } from "@/lib/constants";
 import type { Paper, PaperStatus } from "@/lib/types";
 import { useEditorStore } from "@/lib/store/editor-store";
-import { useState, useRef, useEffect } from "react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
-const STATUS_CONFIG: Record<
-  PaperStatus,
-  { label: string; dotColor: string; bgColor: string }
-> = {
-  draft: {
-    label: "Draft",
-    dotColor: "bg-ink-400",
-    bgColor: "bg-ink-100 text-ink-600 dark:bg-ink-800 dark:text-ink-400",
-  },
-  "in-review": {
-    label: "In Review",
-    dotColor: "bg-info",
-    bgColor: "bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300",
-  },
-  revision: {
-    label: "Revision",
-    dotColor: "bg-warning",
-    bgColor:
-      "bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-300",
-  },
-  final: {
-    label: "Final",
-    dotColor: "bg-success",
-    bgColor:
-      "bg-green-50 text-green-700 dark:bg-green-950 dark:text-green-300",
-  },
-  published: {
-    label: "Published",
-    dotColor: "bg-brand-500",
-    bgColor:
-      "bg-brand-50 text-brand-700 dark:bg-brand-950 dark:text-brand-300",
-  },
+const statusClasses: Record<PaperStatus, string> = {
+  draft: "bg-ink-100 text-ink-700",
+  "in-review": "bg-blue-100 text-blue-800",
+  revision: "bg-amber-100 text-amber-800",
+  final: "bg-green-100 text-green-800",
+  published: "bg-brand-100 text-brand-800",
 };
 
-function formatRelativeTime(dateString: string): string {
-  const date = new Date(dateString);
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffMins = Math.floor(diffMs / 60_000);
-  const diffHours = Math.floor(diffMs / 3_600_000);
-  const diffDays = Math.floor(diffMs / 86_400_000);
+function relativeTime(date: string) {
+  const now = Date.now();
+  const diff = now - new Date(date).getTime();
+  const mins = Math.floor(diff / 60_000);
+  const hours = Math.floor(diff / 3_600_000);
+  const days = Math.floor(diff / 86_400_000);
 
-  if (diffMins < 1) return "Just now";
-  if (diffMins < 60) return `${diffMins}m ago`;
-  if (diffHours < 24) return `${diffHours}h ago`;
-  if (diffDays < 7) return `${diffDays}d ago`;
-  return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins}m ago`;
+  if (hours < 24) return `${hours}h ago`;
+  if (days < 7) return `${days}d ago`;
+
+  return new Date(date).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
 }
 
 interface PaperCardProps {
@@ -71,172 +50,108 @@ interface PaperCardProps {
 
 export function PaperCard({ paper, index }: PaperCardProps) {
   const router = useRouter();
-  const { papers, setPapers } = useEditorStore();
-  const [menuOpen, setMenuOpen] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
+  const papers = useEditorStore((s) => s.papers);
+  const setPapers = useEditorStore((s) => s.setPapers);
 
-  const status = STATUS_CONFIG[paper.status];
-  const templateLabel =
-    PAPER_TEMPLATES[paper.template]?.label ?? paper.template;
-
-  useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setMenuOpen(false);
-      }
-    }
-    if (menuOpen) {
-      document.addEventListener("mousedown", handleClickOutside);
-      return () =>
-        document.removeEventListener("mousedown", handleClickOutside);
-    }
-  }, [menuOpen]);
+  const metadata = useMemo(
+    () => ({
+      updatedLabel: relativeTime(paper.updatedAt),
+      templateLabel: PAPER_TEMPLATES[paper.template]?.label ?? paper.template,
+    }),
+    [paper]
+  );
 
   const handleOpen = () => {
     router.push(`/editor/${paper.id}`);
   };
 
   const handleDuplicate = () => {
-    const duplicate: Paper = {
-      ...paper,
-      id: crypto.randomUUID(),
-      title: `${paper.title} (Copy)`,
-      status: "draft",
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-    setPapers([...papers, duplicate]);
-    setMenuOpen(false);
+    const now = new Date().toISOString();
+
+    setPapers([
+      ...papers,
+      {
+        ...paper,
+        id: crypto.randomUUID(),
+        title: `${paper.title} (Copy)`,
+        status: "draft",
+        createdAt: now,
+        updatedAt: now,
+      },
+    ]);
   };
 
   const handleDelete = () => {
-    setPapers(papers.filter((p) => p.id !== paper.id));
-    setMenuOpen(false);
-  };
-
-  const handleExport = () => {
-    // Placeholder for export functionality
-    setMenuOpen(false);
+    setPapers(papers.filter((entry) => entry.id !== paper.id));
   };
 
   return (
     <motion.article
-      initial={{ opacity: 0, y: 12 }}
+      initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, delay: index * 0.05 }}
-      className="group relative rounded-lg border border-ink-200 bg-surface-elevated shadow-sm transition-shadow hover:shadow-md dark:border-ink-700"
+      className="group rounded-2xl border border-ink-200 bg-surface p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-brand-300 hover:shadow-md"
     >
-      {/* Clickable area */}
-      <button
-        onClick={handleOpen}
-        className="w-full p-5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 rounded-lg"
-        aria-label={`Open paper: ${paper.title}`}
-      >
-        {/* Header */}
-        <div className="mb-3 flex items-start justify-between gap-2">
-          <h3 className="text-sm font-semibold leading-snug text-ink-900 line-clamp-2 dark:text-ink-100">
-            {paper.title}
-          </h3>
-        </div>
-
-        {/* Badges */}
-        <div className="mb-4 flex flex-wrap items-center gap-1.5">
-          <span
-            className={cn(
-              "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium",
-              status.bgColor
-            )}
-          >
-            <span
-              className={cn("h-1.5 w-1.5 rounded-full", status.dotColor)}
-              aria-hidden="true"
-            />
-            {status.label}
-          </span>
-          <span className="rounded-full bg-ink-100 px-2 py-0.5 text-[11px] font-medium text-ink-600 dark:bg-ink-800 dark:text-ink-400">
-            {templateLabel}
-          </span>
-        </div>
-
-        {/* Footer */}
-        <div className="flex items-center justify-between text-xs text-ink-500 dark:text-ink-400">
-          <span>{paper.wordCount.toLocaleString()} words</span>
-          <span>{formatRelativeTime(paper.updatedAt)}</span>
-        </div>
-      </button>
-
-      {/* Three-dot menu */}
-      <div className="absolute right-3 top-3" ref={menuRef}>
+      <div className="flex items-start justify-between gap-3">
         <button
-          onClick={(e) => {
-            e.stopPropagation();
-            setMenuOpen(!menuOpen);
-          }}
-          className={cn(
-            "rounded-md p-1 text-ink-400 transition-colors hover:bg-ink-100 hover:text-ink-600 dark:hover:bg-ink-800 dark:hover:text-ink-300",
-            menuOpen
-              ? "bg-ink-100 text-ink-600 dark:bg-ink-800 dark:text-ink-300"
-              : "opacity-0 group-hover:opacity-100"
-          )}
-          aria-label={`Actions for ${paper.title}`}
-          aria-expanded={menuOpen}
-          aria-haspopup="menu"
+          onClick={handleOpen}
+          className="flex-1 text-left"
+          aria-label={`Open ${paper.title}`}
         >
-          <MoreHorizontal className="h-4 w-4" />
+          <h3 className="line-clamp-2 text-base font-semibold text-ink-950">{paper.title}</h3>
         </button>
 
-        {menuOpen && (
-          <div
-            className="absolute right-0 top-full z-10 mt-1 w-40 overflow-hidden rounded-lg border border-ink-200 bg-surface-elevated py-1 shadow-lg dark:border-ink-700"
-            role="menu"
-          >
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
             <button
-              onClick={(e) => {
-                e.stopPropagation();
-                handleOpen();
-              }}
-              className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm text-ink-700 hover:bg-ink-50 dark:text-ink-300 dark:hover:bg-ink-800"
-              role="menuitem"
+              className="rounded-lg border border-transparent p-1.5 text-ink-500 transition hover:border-ink-300 hover:bg-white hover:text-ink-900"
+              aria-label={`Actions for ${paper.title}`}
             >
-              <ExternalLink className="h-3.5 w-3.5" />
+              <MoreHorizontal className="h-4 w-4" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-44">
+            <DropdownMenuItem onClick={handleOpen}>
+              <ExternalLink className="h-4 w-4" />
               Open
-            </button>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                handleDuplicate();
-              }}
-              className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm text-ink-700 hover:bg-ink-50 dark:text-ink-300 dark:hover:bg-ink-800"
-              role="menuitem"
-            >
-              <Copy className="h-3.5 w-3.5" />
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={handleDuplicate}>
+              <Copy className="h-4 w-4" />
               Duplicate
-            </button>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                handleExport();
-              }}
-              className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm text-ink-700 hover:bg-ink-50 dark:text-ink-300 dark:hover:bg-ink-800"
-              role="menuitem"
-            >
-              <Download className="h-3.5 w-3.5" />
+            </DropdownMenuItem>
+            <DropdownMenuItem>
+              <Download className="h-4 w-4" />
               Export
-            </button>
-            <div className="my-1 border-t border-ink-200 dark:border-ink-700" />
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                handleDelete();
-              }}
-              className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm text-error hover:bg-red-50 dark:hover:bg-red-950"
-              role="menuitem"
-            >
-              <Trash2 className="h-3.5 w-3.5" />
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={handleDelete} className="text-error focus:text-error">
+              <Trash2 className="h-4 w-4" />
               Delete
-            </button>
-          </div>
-        )}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+
+      <div className="mt-4 flex flex-wrap items-center gap-2">
+        <span className={cn("rounded-full px-2.5 py-1 text-[11px] font-semibold capitalize", statusClasses[paper.status])}>
+          {paper.status}
+        </span>
+        <span className="rounded-full bg-ink-100 px-2.5 py-1 text-[11px] font-semibold text-ink-700">
+          {metadata.templateLabel}
+        </span>
+        <span className="rounded-full bg-mercury-100 px-2.5 py-1 text-[11px] font-semibold text-mercury-800">
+          {paper.citationStyle.toUpperCase()}
+        </span>
+      </div>
+
+      <div className="mt-4 space-y-1 text-xs text-ink-500">
+        {paper.field ? <p>Field: {paper.field}</p> : null}
+        {paper.targetJournal ? <p>Target journal: {paper.targetJournal}</p> : null}
+      </div>
+
+      <div className="mt-5 flex items-center justify-between border-t border-ink-200 pt-4 text-sm text-ink-600">
+        <span>{paper.wordCount.toLocaleString()} words</span>
+        <span className="font-medium">Updated {metadata.updatedLabel}</span>
       </div>
     </motion.article>
   );

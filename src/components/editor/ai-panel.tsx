@@ -1,52 +1,58 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import {
-  MessageSquare,
-  ClipboardCheck,
   BookOpen,
+  ChevronRight,
+  ClipboardCheck,
   ListTree,
-  Send,
   Loader2,
+  MessageSquare,
+  Send,
   Sparkles,
   Trash2,
-  ChevronRight,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils/cn";
-import { useEditorStore } from "@/lib/store/editor-store";
 import { streamChatCompletion } from "@/lib/mercury/client";
+import { useEditorStore } from "@/lib/store/editor-store";
 import { CitationSearch } from "@/components/editor/citation-search";
-import type { AIPanelMode, AIMessage, Citation } from "@/lib/types";
+import type { AIMessage, AIPanelMode, Citation } from "@/lib/types";
 import type { Editor } from "@tiptap/react";
 
 interface AIPanelProps {
   editor: Editor | null;
 }
 
-// ─── Chat Tab ───────────────────────────────────────────────
+const tabIcons: Record<AIPanelMode, React.ComponentType<{ className?: string }>> = {
+  chat: MessageSquare,
+  review: ClipboardCheck,
+  citations: BookOpen,
+  outline: ListTree,
+};
 
 function ChatTab({ editor }: { editor: Editor | null }) {
   const aiMessages = useEditorStore((s) => s.aiMessages);
-  const isAIStreaming = useEditorStore((s) => s.isAIStreaming);
+  const isStreaming = useEditorStore((s) => s.isAIStreaming);
   const addAIMessage = useEditorStore((s) => s.addAIMessage);
   const updateLastAIMessage = useEditorStore((s) => s.updateLastAIMessage);
   const setIsAIStreaming = useEditorStore((s) => s.setIsAIStreaming);
   const clearAIMessages = useEditorStore((s) => s.clearAIMessages);
+
   const [input, setInput] = useState("");
-  const messagesEndRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
+  const endRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    endRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [aiMessages]);
 
   const handleSend = useCallback(async () => {
     const trimmed = input.trim();
-    if (!trimmed || isAIStreaming) return;
+    if (!trimmed || isStreaming) return;
 
     const editorContent = editor?.getText() ?? "";
 
@@ -57,7 +63,6 @@ function ChatTab({ editor }: { editor: Editor | null }) {
       timestamp: new Date().toISOString(),
     };
     addAIMessage(userMessage);
-    setInput("");
 
     const assistantMessage: AIMessage = {
       id: crypto.randomUUID(),
@@ -68,6 +73,8 @@ function ChatTab({ editor }: { editor: Editor | null }) {
       isStreaming: true,
     };
     addAIMessage(assistantMessage);
+
+    setInput("");
     setIsAIStreaming(true);
 
     abortRef.current?.abort();
@@ -78,38 +85,36 @@ function ChatTab({ editor }: { editor: Editor | null }) {
 
     const contextMessages = [
       ...aiMessages
-        .filter((m) => !m.isStreaming)
-        .map((m) => ({
-          role: m.role as "user" | "assistant",
-          content: m.content,
+        .filter((message) => !message.isStreaming)
+        .map((message) => ({
+          role: message.role as "user" | "assistant",
+          content: message.content,
         })),
       {
         role: "user" as const,
         content: editorContent
-          ? `[Current paper content]:\n${editorContent}\n\n[User question]:\n${trimmed}`
+          ? `[Manuscript context]\n${editorContent}\n\n[Prompt]\n${trimmed}`
           : trimmed,
       },
     ];
 
     await streamChatCompletion(contextMessages, {
-      onChunk: (text) => {
-        accumulated += text;
+      onChunk: (chunk) => {
+        accumulated += chunk;
         updateLastAIMessage(accumulated);
       },
       onDone: () => {
         setIsAIStreaming(false);
       },
       onError: (error) => {
-        updateLastAIMessage(
-          accumulated || `Error: ${error.message}`
-        );
+        updateLastAIMessage(accumulated || `Error: ${error.message}`);
         setIsAIStreaming(false);
       },
       signal: controller.signal,
     });
   }, [
     input,
-    isAIStreaming,
+    isStreaming,
     editor,
     aiMessages,
     addAIMessage,
@@ -117,108 +122,101 @@ function ChatTab({ editor }: { editor: Editor | null }) {
     setIsAIStreaming,
   ]);
 
-  const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent) => {
-      if (e.key === "Enter" && !e.shiftKey) {
-        e.preventDefault();
-        handleSend();
-      }
-    },
-    [handleSend]
-  );
-
   return (
-    <div className="flex flex-col h-full">
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-3 space-y-3 min-h-0">
-        {aiMessages.length === 0 && (
-          <div className="flex flex-col items-center justify-center h-full text-ink-400">
-            <Sparkles className="h-8 w-8 mb-3 opacity-40" />
-            <p className="text-sm font-medium">Ask Mercury anything</p>
-            <p className="text-xs mt-1 text-center max-w-[240px]">
-              Your full paper is included as context for every message.
+    <div className="flex h-full flex-col">
+      <div className="flex-1 space-y-3 overflow-y-auto px-4 py-4">
+        {aiMessages.length === 0 ? (
+          <div className="flex h-full flex-col items-center justify-center rounded-2xl border border-ink-200 bg-surface px-4 text-center">
+            <Sparkles className="h-8 w-8 text-mercury-500" />
+            <p className="mt-3 text-sm font-semibold text-ink-900">Ask Mercury about this manuscript</p>
+            <p className="mt-1 text-xs leading-relaxed text-ink-500">
+              The full document is added as context for drafting guidance and review.
             </p>
           </div>
-        )}
-
-        {aiMessages.map((msg) => (
-          <div
-            key={msg.id}
-            className={cn(
-              "flex flex-col gap-1",
-              msg.role === "user" ? "items-end" : "items-start"
-            )}
-          >
-            <div
+        ) : (
+          aiMessages.map((message) => (
+            <article
+              key={message.id}
               className={cn(
-                "rounded-lg px-3 py-2 text-sm max-w-[90%] whitespace-pre-wrap break-words",
-                msg.role === "user"
-                  ? "bg-brand-600 text-white"
-                  : "bg-ink-100 text-ink-900 dark:bg-ink-800 dark:text-ink-100"
+                "flex flex-col gap-1",
+                message.role === "user" ? "items-end" : "items-start"
               )}
             >
-              {msg.content || (
-                <span className="flex items-center gap-1.5 text-ink-400">
-                  <Loader2 className="h-3 w-3 animate-spin" />
-                  Thinking...
-                </span>
-              )}
-            </div>
-            {msg.role === "assistant" && msg.model && (
-              <Badge variant="mercury" className="text-[9px] px-1 py-0">
-                {msg.model === "mercury-2" ? "Mercury 2" : "Mercury Edit"}
-              </Badge>
-            )}
-          </div>
-        ))}
-        <div ref={messagesEndRef} />
+              <div
+                className={cn(
+                  "max-w-[92%] whitespace-pre-wrap rounded-xl px-3 py-2 text-sm leading-relaxed",
+                  message.role === "user"
+                    ? "bg-brand-600 text-white"
+                    : "border border-ink-200 bg-white text-ink-800"
+                )}
+              >
+                {message.content || (
+                  <span className="inline-flex items-center gap-1 text-ink-500">
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    Thinking
+                  </span>
+                )}
+              </div>
+
+              {message.role === "assistant" && message.model ? (
+                <Badge
+                  variant="mercury"
+                  className="border border-mercury-200 bg-mercury-50 px-1.5 py-0 text-[10px] uppercase tracking-[0.1em]"
+                >
+                  {message.model}
+                </Badge>
+              ) : null}
+            </article>
+          ))
+        )}
+        <div ref={endRef} />
       </div>
 
-      {/* Clear + Input */}
-      <div className="border-t border-ink-200 dark:border-ink-700 p-3 space-y-2">
-        {aiMessages.length > 0 && (
-          <div className="flex justify-end">
+      <div className="border-t border-ink-200 bg-white px-4 py-3">
+        {aiMessages.length > 0 ? (
+          <div className="mb-2 flex justify-end">
             <Button
-              variant="ghost"
               size="sm"
-              className="h-6 text-xs text-ink-500 gap-1"
+              variant="ghost"
+              className="h-7 gap-1 text-xs"
               onClick={clearAIMessages}
-              disabled={isAIStreaming}
+              disabled={isStreaming}
             >
-              <Trash2 className="h-3 w-3" />
+              <Trash2 className="h-3.5 w-3.5" />
               Clear
             </Button>
           </div>
-        )}
-        <div className="flex gap-2">
+        ) : null}
+
+        <div className="flex items-end gap-2">
           <textarea
             value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Ask about your paper..."
-            rows={1}
-            className="flex-1 resize-none rounded-lg border border-ink-300 bg-surface px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-500 dark:border-ink-600 dark:bg-surface-secondary dark:text-ink-100 placeholder:text-ink-400"
+            onChange={(event) => setInput(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" && !event.shiftKey) {
+                event.preventDefault();
+                handleSend();
+              }
+            }}
+            placeholder="Ask for rewrites, critique, or evidence suggestions..."
+            rows={2}
+            className="min-h-[64px] flex-1 resize-none rounded-xl border border-ink-300 bg-surface px-3 py-2 text-sm text-ink-900 outline-none transition focus:border-brand-400 focus:ring-2 focus:ring-brand-300/30"
           />
+
           <Button
             size="icon"
             onClick={handleSend}
-            disabled={!input.trim() || isAIStreaming}
-            className="h-9 w-9 shrink-0"
-            aria-label="Send message"
+            disabled={!input.trim() || isStreaming}
+            aria-label="Send"
+            className="h-10 w-10"
           >
-            {isAIStreaming ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Send className="h-4 w-4" />
-            )}
+            {isStreaming ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
           </Button>
         </div>
       </div>
     </div>
   );
 }
-
-// ─── Review Tab ─────────────────────────────────────────────
 
 interface ReviewCategory {
   label: string;
@@ -232,8 +230,9 @@ function ReviewTab({ editor }: { editor: Editor | null }) {
   const setActiveWritingMode = useEditorStore((s) => s.setActiveWritingMode);
   const setIsAIStreaming = useEditorStore((s) => s.setIsAIStreaming);
 
-  const handleReview = useCallback(async () => {
+  const runReview = useCallback(async () => {
     if (!editor) return;
+
     const content = editor.getText();
     if (!content.trim()) return;
 
@@ -242,11 +241,12 @@ function ReviewTab({ editor }: { editor: Editor | null }) {
     setIsAIStreaming(true);
 
     let accumulated = "";
+
     await streamChatCompletion(
       [
         {
           role: "user",
-          content: `Review this academic paper and provide feedback in exactly this JSON format (no other text):
+          content: `Review this academic manuscript and return exactly valid JSON array with four items. Use this schema:
 [
   {"label": "Structure", "score": <1-10>, "feedback": "<2-3 sentences>"},
   {"label": "Argument Flow", "score": <1-10>, "feedback": "<2-3 sentences>"},
@@ -254,41 +254,39 @@ function ReviewTab({ editor }: { editor: Editor | null }) {
   {"label": "Citations", "score": <1-10>, "feedback": "<2-3 sentences>"}
 ]
 
-Paper:
-${content}`,
+Manuscript:\n${content}`,
         },
       ],
       {
-        onChunk: (text) => {
-          accumulated += text;
+        onChunk: (chunk) => {
+          accumulated += chunk;
         },
         onDone: () => {
           try {
-            // Try to extract JSON from the response
             const jsonMatch = accumulated.match(/\[[\s\S]*\]/);
-            if (jsonMatch) {
-              const parsed = JSON.parse(jsonMatch[0]);
-              setResults(parsed);
-            }
+            if (!jsonMatch) throw new Error("No JSON");
+            const parsed = JSON.parse(jsonMatch[0]);
+            setResults(parsed);
           } catch {
             setResults([
               {
-                label: "Review",
+                label: "Parse Error",
                 score: 0,
-                feedback: "Could not parse review results. Please try again.",
+                feedback: "Could not parse structured review output. Please run review again.",
               },
             ]);
+          } finally {
+            setIsReviewing(false);
+            setIsAIStreaming(false);
+            setActiveWritingMode(null);
           }
-          setIsReviewing(false);
-          setIsAIStreaming(false);
-          setActiveWritingMode(null);
         },
         onError: () => {
           setResults([
             {
-              label: "Error",
+              label: "Request Error",
               score: 0,
-              feedback: "Failed to complete review. Please try again.",
+              feedback: "Review request failed. Please try again.",
             },
           ]);
           setIsReviewing(false);
@@ -299,66 +297,46 @@ ${content}`,
     );
   }, [editor, setActiveWritingMode, setIsAIStreaming]);
 
-  const scoreColor = (score: number) => {
-    if (score >= 8) return "text-green-600 dark:text-green-400";
-    if (score >= 5) return "text-amber-600 dark:text-amber-400";
-    return "text-red-600 dark:text-red-400";
+  const getScoreColor = (score: number) => {
+    if (score >= 8) return "text-success";
+    if (score >= 5) return "text-warning";
+    return "text-error";
   };
 
   return (
-    <div className="p-3 space-y-3 overflow-y-auto h-full">
-      <Button
-        onClick={handleReview}
-        disabled={isReviewing}
-        loading={isReviewing}
-        variant="mercury"
-        className="w-full"
-        size="sm"
-      >
-        <ClipboardCheck className="h-4 w-4 mr-1.5" />
-        {isReviewing ? "Reviewing..." : "Review Paper"}
-      </Button>
+    <div className="flex h-full flex-col">
+      <div className="px-4 pt-4">
+        <Button onClick={runReview} loading={isReviewing} variant="mercury" className="w-full" size="sm">
+          <ClipboardCheck className="mr-1.5 h-4 w-4" />
+          {isReviewing ? "Reviewing manuscript" : "Run manuscript review"}
+        </Button>
+      </div>
 
-      {results.length === 0 && !isReviewing && (
-        <div className="flex flex-col items-center justify-center py-8 text-ink-400">
-          <ClipboardCheck className="h-8 w-8 mb-2 opacity-40" />
-          <p className="text-sm">No review yet</p>
-          <p className="text-xs mt-1 text-center">
-            Get AI feedback on structure, tone, and citations
-          </p>
-        </div>
-      )}
-
-      {results.map((cat) => (
-        <div
-          key={cat.label}
-          className="rounded-lg border border-ink-200 bg-surface p-3 space-y-1.5 dark:border-ink-700"
-        >
-          <div className="flex items-center justify-between">
-            <h4 className="text-sm font-semibold text-ink-900 dark:text-ink-100">
-              {cat.label}
-            </h4>
-            {cat.score > 0 && (
-              <span
-                className={cn(
-                  "text-sm font-bold tabular-nums",
-                  scoreColor(cat.score)
-                )}
-              >
-                {cat.score}/10
-              </span>
-            )}
+      <div className="mt-4 flex-1 space-y-3 overflow-y-auto px-4 pb-4">
+        {results.length === 0 && !isReviewing ? (
+          <div className="rounded-2xl border border-ink-200 bg-surface p-5 text-center">
+            <p className="text-sm font-semibold text-ink-900">No review yet</p>
+            <p className="mt-2 text-xs text-ink-500">
+              Evaluate structure, tone, argument progression, and citation coverage.
+            </p>
           </div>
-          <p className="text-xs text-ink-600 leading-relaxed dark:text-ink-400">
-            {cat.feedback}
-          </p>
-        </div>
-      ))}
+        ) : null}
+
+        {results.map((result) => (
+          <article key={result.label} className="rounded-xl border border-ink-200 bg-white p-4">
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-semibold text-ink-900">{result.label}</p>
+              {result.score > 0 ? (
+                <p className={cn("text-sm font-semibold tabular-nums", getScoreColor(result.score))}>{result.score}/10</p>
+              ) : null}
+            </div>
+            <p className="mt-2 text-xs leading-relaxed text-ink-600">{result.feedback}</p>
+          </article>
+        ))}
+      </div>
     </div>
   );
 }
-
-// ─── Outline Tab ────────────────────────────────────────────
 
 interface HeadingItem {
   level: number;
@@ -372,7 +350,7 @@ function OutlineTab({ editor }: { editor: Editor | null }) {
   useEffect(() => {
     if (!editor) return;
 
-    const extractHeadings = () => {
+    const extract = () => {
       const items: HeadingItem[] = [];
       editor.state.doc.descendants((node, pos) => {
         if (node.type.name === "heading") {
@@ -386,69 +364,52 @@ function OutlineTab({ editor }: { editor: Editor | null }) {
       setHeadings(items);
     };
 
-    extractHeadings();
-    editor.on("update", extractHeadings);
+    extract();
+    editor.on("update", extract);
+
     return () => {
-      editor.off("update", extractHeadings);
+      editor.off("update", extract);
     };
   }, [editor]);
 
-  const scrollTo = useCallback(
-    (pos: number) => {
-      if (!editor) return;
-      editor.chain().focus().setTextSelection(pos).run();
-      // Scroll the heading into view
-      const element = editor.view.domAtPos(pos);
-      const node = element.node as Element;
-      node?.scrollIntoView?.({ behavior: "smooth", block: "center" });
-    },
-    [editor]
-  );
+  const jumpTo = (pos: number) => {
+    if (!editor) return;
+
+    editor.chain().focus().setTextSelection(pos).run();
+    const dom = editor.view.domAtPos(pos).node as Element;
+    dom?.scrollIntoView?.({ behavior: "smooth", block: "center" });
+  };
 
   return (
-    <div className="p-3 overflow-y-auto h-full">
-      {headings.length === 0 && (
-        <div className="flex flex-col items-center justify-center py-8 text-ink-400">
-          <ListTree className="h-8 w-8 mb-2 opacity-40" />
-          <p className="text-sm">No headings found</p>
-          <p className="text-xs mt-1 text-center">
-            Add headings to your paper to build an outline
-          </p>
+    <div className="h-full overflow-y-auto px-4 py-4">
+      {headings.length === 0 ? (
+        <div className="rounded-2xl border border-ink-200 bg-surface p-5 text-center">
+          <p className="text-sm font-semibold text-ink-900">No headings detected</p>
+          <p className="mt-2 text-xs text-ink-500">Add H1/H2/H3 headings to build a navigable outline.</p>
         </div>
+      ) : (
+        <nav className="space-y-1" aria-label="Document outline">
+          {headings.map((heading, index) => (
+            <button
+              key={`${heading.pos}-${index}`}
+              onClick={() => jumpTo(heading.pos)}
+              className={cn(
+                "flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm transition",
+                "hover:bg-surface-secondary",
+                heading.level === 1 && "font-semibold text-ink-900",
+                heading.level === 2 && "pl-5 text-ink-700",
+                heading.level === 3 && "pl-8 text-ink-600"
+              )}
+            >
+              <ChevronRight className="h-3.5 w-3.5 shrink-0 text-ink-400" />
+              <span className="truncate">{heading.text || "Untitled section"}</span>
+            </button>
+          ))}
+        </nav>
       )}
-
-      <nav aria-label="Document outline" className="space-y-0.5">
-        {headings.map((heading, i) => (
-          <button
-            key={`${heading.pos}-${i}`}
-            onClick={() => scrollTo(heading.pos)}
-            className={cn(
-              "flex w-full items-center gap-1.5 rounded-md px-2 py-1.5 text-sm text-left",
-              "text-ink-700 hover:bg-ink-100 transition-colors",
-              "dark:text-ink-300 dark:hover:bg-ink-800",
-              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500",
-              heading.level === 1 && "font-semibold",
-              heading.level === 2 && "pl-5",
-              heading.level === 3 && "pl-8 text-xs"
-            )}
-          >
-            <ChevronRight className="h-3 w-3 shrink-0 text-ink-400" />
-            <span className="truncate">{heading.text || "Untitled"}</span>
-          </button>
-        ))}
-      </nav>
     </div>
   );
 }
-
-// ─── AI Panel ───────────────────────────────────────────────
-
-const TAB_ICONS: Record<AIPanelMode, React.ComponentType<{ className?: string }>> = {
-  chat: MessageSquare,
-  review: ClipboardCheck,
-  citations: BookOpen,
-  outline: ListTree,
-};
 
 export function AIPanel({ editor }: AIPanelProps) {
   const aiPanelOpen = useEditorStore((s) => s.aiPanelOpen);
@@ -458,73 +419,70 @@ export function AIPanel({ editor }: AIPanelProps) {
   const handleInsertCitation = useCallback(
     (citation: Citation) => {
       if (!editor) return;
+
       const authors = citation.authors;
-      let authorStr = "Unknown";
-      if (authors.length === 1) authorStr = authors[0].name;
-      else if (authors.length === 2)
-        authorStr = `${authors[0].name} & ${authors[1].name}`;
-      else if (authors.length > 2)
-        authorStr = `${authors[0].name} et al.`;
+      let authorText = "Unknown";
+      if (authors.length === 1) authorText = authors[0].name;
+      if (authors.length === 2) authorText = `${authors[0].name} & ${authors[1].name}`;
+      if (authors.length > 2) authorText = `${authors[0].name} et al.`;
 
-      const citationText = `(${authorStr}, ${citation.year || "n.d."})`;
-
-      editor.chain().focus().insertContent(citationText).run();
+      editor.chain().focus().insertContent(`(${authorText}, ${citation.year || "n.d."})`).run();
     },
     [editor]
   );
 
   return (
     <AnimatePresence mode="wait">
-      {aiPanelOpen && (
+      {aiPanelOpen ? (
         <motion.aside
           initial={{ width: 0, opacity: 0 }}
-          animate={{ width: 400, opacity: 1 }}
+          animate={{ width: 430, opacity: 1 }}
           exit={{ width: 0, opacity: 0 }}
           transition={{ duration: 0.2, ease: "easeInOut" }}
-          className="flex flex-col h-full border-l border-ink-200 bg-surface-secondary overflow-hidden dark:border-ink-700 dark:bg-surface-secondary"
-          aria-label="AI Assistant Panel"
+          className="hidden h-full shrink-0 overflow-hidden border-l border-ink-200 bg-white lg:flex lg:flex-col"
+          aria-label="AI panel"
         >
           <Tabs
             value={aiPanelMode}
-            onValueChange={(v) => setAIPanelMode(v as AIPanelMode)}
-            className="flex flex-col h-full"
+            onValueChange={(value) => setAIPanelMode(value as AIPanelMode)}
+            className="flex h-full flex-col"
           >
-            <TabsList className="w-full px-2 shrink-0">
-              {(
-                Object.keys(TAB_ICONS) as AIPanelMode[]
-              ).map((mode) => {
-                const Icon = TAB_ICONS[mode];
-                return (
-                  <TabsTrigger
-                    key={mode}
-                    value={mode}
-                    className="flex-1 gap-1.5 text-xs capitalize"
-                  >
-                    <Icon className="h-3.5 w-3.5" />
-                    {mode}
-                  </TabsTrigger>
-                );
-              })}
-            </TabsList>
+            <div className="border-b border-ink-200 px-3 pt-3">
+              <TabsList className="w-full justify-start border-0">
+                {(Object.keys(tabIcons) as AIPanelMode[]).map((mode) => {
+                  const Icon = tabIcons[mode];
+                  return (
+                    <TabsTrigger
+                      key={mode}
+                      value={mode}
+                      className="gap-1.5 rounded-md border-b-0 data-[state=active]:bg-surface-secondary data-[state=active]:text-brand-700"
+                    >
+                      <Icon className="h-3.5 w-3.5" />
+                      {mode}
+                    </TabsTrigger>
+                  );
+                })}
+              </TabsList>
+            </div>
 
-            <TabsContent value="chat" className="flex-1 min-h-0">
+            <TabsContent value="chat" className="mt-0 flex-1 overflow-hidden">
               <ChatTab editor={editor} />
             </TabsContent>
 
-            <TabsContent value="review" className="flex-1 min-h-0 overflow-hidden">
+            <TabsContent value="review" className="mt-0 flex-1 overflow-hidden">
               <ReviewTab editor={editor} />
             </TabsContent>
 
-            <TabsContent value="citations" className="flex-1 min-h-0 overflow-hidden p-3">
+            <TabsContent value="citations" className="mt-0 flex-1 overflow-hidden px-4 py-4">
               <CitationSearch onInsert={handleInsertCitation} />
             </TabsContent>
 
-            <TabsContent value="outline" className="flex-1 min-h-0 overflow-hidden">
+            <TabsContent value="outline" className="mt-0 flex-1 overflow-hidden">
               <OutlineTab editor={editor} />
             </TabsContent>
           </Tabs>
         </motion.aside>
-      )}
+      ) : null}
     </AnimatePresence>
   );
 }

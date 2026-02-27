@@ -1,4 +1,4 @@
-import { MERCURY_API_BASE, MERCURY_ENDPOINTS, ACADEMIC_SYSTEM_PROMPT } from "@/lib/constants";
+import { ACADEMIC_SYSTEM_PROMPT } from "@/lib/constants";
 import type { MercuryModel, MercuryMessage, WritingMode } from "@/lib/types";
 
 // ─── Mercury Client ────────────────────────────────────────────
