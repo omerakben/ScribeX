@@ -79,6 +79,14 @@
   --animate-scale-in: scale-in 180ms ease-out;
 }
 
+/* Ghost text for autocomplete suggestions */
+.ghost-text {
+  color: var(--color-ink-400);
+  opacity: 0.5;
+  pointer-events: none;
+  user-select: none;
+}
+
 @keyframes fade-in {
   from {
     opacity: 0;
@@ -225,6 +233,20 @@ body {
   line-height: 1.85;
   max-width: 100%;
   letter-spacing: 0.003em;
+  min-height: 100%;
+  cursor: text;
+}
+
+/* Make EditorContent wrapper stretch to fill the paper */
+.tiptap-wrapper {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.tiptap-wrapper .tiptap {
+  flex: 1;
 }
 
 .tiptap > * + * {
@@ -285,6 +307,18 @@ body {
   font-size: 0.875em;
 }
 
+.tiptap sup {
+  font-size: 0.75em;
+  vertical-align: super;
+  line-height: 0;
+}
+
+.tiptap sub {
+  font-size: 0.75em;
+  vertical-align: sub;
+  line-height: 0;
+}
+
 .tiptap pre {
   overflow-x: auto;
   border-radius: 10px;
@@ -315,6 +349,127 @@ body {
   margin: 1.5rem 0;
 }
 
+/* Math nodes (KaTeX) */
+.tiptap .Tiptap-mathematics-editor {
+  padding: 2px 4px;
+  border-radius: 4px;
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+  background: var(--color-ink-50);
+  color: var(--color-brand-700);
+  cursor: text;
+}
+
+.tiptap .Tiptap-mathematics-render {
+  display: inline;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+  padding: 1px 2px;
+  border-radius: 3px;
+}
+
+.tiptap .Tiptap-mathematics-render:hover {
+  background: var(--color-brand-50);
+}
+
+.tiptap .Tiptap-mathematics-render--editable {
+  background: var(--color-brand-50);
+}
+
+/* Block (display) math centering */
+.tiptap .Tiptap-mathematics-editor[data-display="true"],
+.tiptap div[data-type="mathematics"] {
+  display: block;
+  text-align: center;
+  margin: 1.25rem 0;
+}
+
+/* Mermaid diagram blocks */
+.mermaid-block {
+  margin: 1.5rem 0;
+  border: 1px solid var(--color-ink-200);
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--color-ink-50);
+}
+
+.mermaid-block--selected {
+  border-color: var(--color-brand-400);
+  box-shadow: 0 0 0 2px oklch(53.8% 0.148 252 / 0.15);
+}
+
+.mermaid-block--editing {
+  border-color: var(--color-brand-300);
+}
+
+.mermaid-block__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 12px;
+  background: var(--color-ink-100);
+  border-bottom: 1px solid var(--color-ink-200);
+}
+
+.mermaid-block__label {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-ink-500);
+}
+
+.mermaid-block__action {
+  font-family: var(--font-sans);
+  font-size: 0.7rem;
+  font-weight: 500;
+  color: var(--color-brand-600);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px 8px;
+  border-radius: 4px;
+  transition: background 0.15s;
+}
+
+.mermaid-block__action:hover {
+  background: var(--color-brand-50);
+}
+
+.mermaid-block__svg {
+  padding: 1.5rem;
+  display: flex;
+  justify-content: center;
+  overflow-x: auto;
+}
+
+.mermaid-block__svg svg {
+  max-width: 100%;
+  height: auto;
+}
+
+.mermaid-block__editor {
+  width: 100%;
+  min-height: 120px;
+  padding: 1rem;
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  line-height: 1.6;
+  color: var(--color-ink-800);
+  background: white;
+  border: none;
+  outline: none;
+  resize: vertical;
+}
+
+.mermaid-block__error {
+  padding: 1rem;
+  font-size: 0.8rem;
+  color: var(--color-error);
+  font-family: var(--font-mono);
+}
+
 @media (prefers-color-scheme: dark) {
   .tiptap {
     color: var(--color-ink-200);
@@ -343,6 +498,30 @@ body {
 
   .tiptap a {
     color: var(--color-brand-400);
+  }
+
+  .tiptap .Tiptap-mathematics-editor {
+    background: var(--color-ink-800);
+    color: var(--color-brand-300);
+  }
+
+  .tiptap .Tiptap-mathematics-render:hover {
+    background: var(--color-brand-900);
+  }
+
+  .mermaid-block {
+    border-color: var(--color-ink-700);
+    background: var(--color-ink-900);
+  }
+
+  .mermaid-block__header {
+    background: var(--color-ink-800);
+    border-bottom-color: var(--color-ink-700);
+  }
+
+  .mermaid-block__editor {
+    color: var(--color-ink-200);
+    background: var(--color-ink-950);
   }
 }
 
@@ -375,5 +554,137 @@ body {
 
   .prose-academic strong {
     color: var(--color-ink-100);
+  }
+}
+
+@keyframes template-card-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Templates page redesign */
+.templates-page-shell {
+  position: relative;
+  isolation: isolate;
+}
+
+.templates-page-shell::before {
+  content: "";
+  position: absolute;
+  top: -3rem;
+  left: -2rem;
+  z-index: -1;
+  width: min(45vw, 520px);
+  height: 260px;
+  border-radius: 9999px;
+  background: radial-gradient(
+    circle at center,
+    oklch(93.8% 0.024 252 / 0.9) 0%,
+    oklch(99.2% 0.004 252 / 0) 70%
+  );
+  pointer-events: none;
+}
+
+.templates-intro-panel {
+  border: 1px solid var(--color-ink-200);
+  border-radius: var(--radius-xl);
+  background: linear-gradient(160deg, var(--color-surface-elevated) 0%, var(--color-surface-secondary) 100%);
+  box-shadow: var(--shadow-sm);
+}
+
+.template-card {
+  border: 1px solid var(--color-ink-200);
+  border-radius: var(--radius-lg);
+  background: linear-gradient(180deg, var(--color-surface-elevated) 0%, var(--color-surface) 100%);
+  box-shadow: var(--shadow-xs);
+  transform: translateY(0);
+  transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease, background 180ms ease;
+}
+
+.template-card:hover,
+.template-card:focus-visible {
+  border-color: var(--color-brand-200);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+
+.template-card:focus-visible {
+  outline: 2px solid oklch(53.8% 0.148 252 / 0.35);
+  outline-offset: 2px;
+}
+
+.template-card:hover .template-icon-wrap,
+.template-card:focus-visible .template-icon-wrap {
+  background: var(--color-brand-50);
+}
+
+.template-card:hover .template-icon-wrap svg,
+.template-card:focus-visible .template-icon-wrap svg {
+  color: var(--color-brand-600);
+}
+
+.template-card-cta {
+  color: var(--color-brand-700);
+}
+
+.template-card-enter {
+  animation: template-card-enter 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: var(--template-delay, 0ms);
+}
+
+@media (prefers-color-scheme: dark) {
+  .templates-page-shell::before {
+    background: radial-gradient(
+      circle at center,
+      oklch(36.4% 0.134 252 / 0.24) 0%,
+      oklch(14.8% 0.018 252 / 0) 70%
+    );
+  }
+
+  .templates-intro-panel,
+  .template-card {
+    border-color: var(--color-ink-700);
+  }
+
+  .template-card:hover,
+  .template-card:focus-visible {
+    border-color: var(--color-brand-500);
+  }
+
+  .template-card:focus-visible {
+    outline-color: oklch(53.8% 0.148 252 / 0.55);
+  }
+
+  .template-card:hover .template-icon-wrap,
+  .template-card:focus-visible .template-icon-wrap {
+    background: var(--color-brand-900);
+  }
+
+  .template-card:hover .template-icon-wrap svg,
+  .template-card:focus-visible .template-icon-wrap svg {
+    color: var(--color-brand-300);
+  }
+
+  .template-card-cta {
+    color: var(--color-brand-300);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .template-card,
+  .template-card:hover,
+  .template-card:focus-visible {
+    transition: none;
+    transform: none;
+  }
+
+  .template-card-enter {
+    animation: none;
   }
 }

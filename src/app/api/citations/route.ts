@@ -2,6 +2,26 @@ import { NextRequest, NextResponse } from "next/server";
 
 const SEMANTIC_SCHOLAR_BASE = "https://api.semanticscholar.org/graph/v1";
 const API_KEY = process.env.SEMANTIC_SCHOLAR_API_KEY;
+const CITATION_PROVIDER = "semantic-scholar" as const;
+
+function pickExternalId(paper: Record<string, unknown>): string {
+  const paperId = typeof paper.paperId === "string" ? paper.paperId : "";
+  if (paperId) return paperId;
+
+  const externalIds = (paper.externalIds as Record<string, string | undefined>) ?? {};
+  const fallbackOrder = ["DOI", "ArXiv", "CorpusId", "MAG", "PubMed", "PMID"];
+  for (const key of fallbackOrder) {
+    const value = externalIds[key];
+    if (typeof value === "string" && value.trim().length > 0) {
+      return value;
+    }
+  }
+
+  const title = typeof paper.title === "string" ? paper.title : "untitled";
+  const normalizedTitle = title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") || "citation";
+  const year = typeof paper.year === "number" ? String(paper.year) : "n.d.";
+  return `${normalizedTitle}-${year}`;
+}
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -39,14 +59,14 @@ export async function GET(req: NextRequest) {
 
     // Transform to our Citation format
     const citations = (data.data ?? []).map((paper: Record<string, unknown>) => ({
-      id: crypto.randomUUID(),
-      paperId: paper.paperId,
+      provider: CITATION_PROVIDER,
+      externalId: pickExternalId(paper),
       title: paper.title,
       authors: (paper.authors as Array<{ name: string; authorId?: string }>) ?? [],
       year: paper.year,
       venue: paper.venue ?? "",
       abstract: paper.abstract,
-      doi: (paper.externalIds as Record<string, string>)?.DOI ?? null,
+      doi: (paper.externalIds as Record<string, string | undefined>)?.DOI,
       url: paper.url,
       citationCount: paper.citationCount ?? 0,
       isOpenAccess: paper.isOpenAccess ?? false,

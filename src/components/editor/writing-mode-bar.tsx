@@ -11,7 +11,7 @@ const modeLabels: Record<WritingMode, string> = {
   "deep-rewrite": "Deep Rewriting",
   "next-edit": "Next Edit",
   review: "Reviewing",
-  "diffusion-draft": "Drafting",
+  "diffusion-draft": "Diffusing",
 };
 
 export function WritingModeBar() {

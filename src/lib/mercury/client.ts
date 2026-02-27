@@ -1,5 +1,5 @@
 import { ACADEMIC_SYSTEM_PROMPT } from "@/lib/constants";
-import type { MercuryModel, MercuryMessage, WritingMode } from "@/lib/types";
+import type { MercuryModel, MercuryMessage, ReasoningEffort, WritingMode } from "@/lib/types";
 
 // ─── Mercury Client ────────────────────────────────────────────
 // Handles all communication with Inception Labs' Mercury API.
@@ -34,7 +34,9 @@ export async function streamChatCompletion(
     maxTokens?: number;
     temperature?: number;
     diffusing?: boolean;
+    reasoningEffort?: ReasoningEffort;
     onChunk: (text: string) => void;
+    onDiffusionStep?: (fullText: string, step: number) => void;
     onDone: () => void;
     onError: (error: Error) => void;
     signal?: AbortSignal;
@@ -55,6 +57,7 @@ export async function streamChatCompletion(
         temperature: options.temperature ?? 0.3,
         stream: true,
         diffusing: options.diffusing ?? false,
+        ...(options.reasoningEffort && { reasoning_effort: options.reasoningEffort }),
       }),
       signal: options.signal,
     });
@@ -68,6 +71,7 @@ export async function streamChatCompletion(
 
     const decoder = new TextDecoder();
     let buffer = "";
+    let diffusionStepCount = 0;
 
     while (true) {
       const { done, value } = await reader.read();
@@ -89,7 +93,13 @@ export async function streamChatCompletion(
           const parsed = JSON.parse(data);
           const content = parsed.choices?.[0]?.delta?.content;
           if (content) {
-            options.onChunk(content);
+            if (options.diffusing && options.onDiffusionStep) {
+              // Diffusion mode: delta.content is the FULL text at this denoising step
+              diffusionStepCount++;
+              options.onDiffusionStep(content, diffusionStepCount);
+            } else {
+              options.onChunk(content);
+            }
           }
         } catch {
           // Skip malformed chunks
@@ -102,6 +112,52 @@ export async function streamChatCompletion(
     if ((error as Error).name === "AbortError") return;
     options.onError(error as Error);
   }
+}
+
+/**
+ * Non-streaming chat completion with structured output (JSON schema).
+ */
+export async function structuredChatCompletion<T>(
+  messages: MercuryMessage[],
+  schema: object,
+  options?: {
+    maxTokens?: number;
+    temperature?: number;
+    reasoningEffort?: ReasoningEffort;
+    signal?: AbortSignal;
+  }
+): Promise<T> {
+  const res = await fetch("/api/mercury", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      endpoint: "chat",
+      model: "mercury-2",
+      messages: [
+        { role: "system", content: ACADEMIC_SYSTEM_PROMPT },
+        ...messages,
+      ],
+      max_tokens: options?.maxTokens ?? 4096,
+      temperature: options?.temperature ?? 0.3,
+      stream: false,
+      response_format: {
+        type: "json_schema",
+        json_schema: schema,
+      },
+      ...(options?.reasoningEffort && { reasoning_effort: options.reasoningEffort }),
+    }),
+    signal: options?.signal,
+  });
+
+  if (!res.ok) {
+    throw new Error(`Mercury API error: ${res.status} ${res.statusText}`);
+  }
+
+  const data = await res.json();
+  const content = data.choices?.[0]?.message?.content;
+  if (!content) throw new Error("No content in response");
+
+  return JSON.parse(content) as T;
 }
 
 /**

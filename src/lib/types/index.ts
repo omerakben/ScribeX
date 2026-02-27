@@ -11,14 +11,33 @@ export type PaperTemplate =
 
 export type PaperStatus = "draft" | "in-review" | "revision" | "final" | "published";
 
-export type CitationStyle = "apa7" | "mla9" | "chicago" | "ieee" | "harvard" | "vancouver";
+export type CitationStyleId =
+  | "apa-7"
+  | "mla-9"
+  | "chicago-17"
+  | "ieee"
+  | "harvard"
+  | "vancouver-icmje";
+
+export type ChicagoCitationVariant = "notes-bibliography" | "author-date";
+
+export interface CitationStyleSelection {
+  id: CitationStyleId;
+  chicagoVariant?: ChicagoCitationVariant;
+}
+
+// Backward compatibility for persisted legacy values.
+export type LegacyCitationStyleId = "apa7" | "mla9" | "chicago" | "ieee" | "harvard" | "vancouver";
+export type CitationStyle = CitationStyleId | LegacyCitationStyleId;
+export type CitationStyleInput = CitationStyleSelection | CitationStyle;
 
 export interface Paper {
   id: string;
   title: string;
   template: PaperTemplate;
   status: PaperStatus;
-  citationStyle: CitationStyle;
+  citationStyle: CitationStyleSelection;
+  references: Citation[];
   content: string; // TipTap JSON
   wordCount: number;
   targetJournal?: string;
@@ -30,6 +49,8 @@ export interface Paper {
 // ─── Mercury Model Types ───────────────────────────────────────
 
 export type MercuryModel = "mercury-2" | "mercury-edit";
+
+export type ReasoningEffort = "instant" | "low" | "medium" | "high";
 
 export type WritingMode =
   | "compose"
@@ -47,6 +68,8 @@ export interface MercuryRequest {
   temperature: number;
   stream: boolean;
   diffusing?: boolean;
+  reasoning_effort?: ReasoningEffort;
+  response_format?: { type: string; json_schema?: object };
 }
 
 export interface MercuryMessage {
@@ -84,18 +107,23 @@ export interface MercuryFIMRequest {
 
 // ─── Citation Types ────────────────────────────────────────────
 
+export type CitationProvider = "semantic-scholar" | (string & {});
+
 export interface Citation {
-  id: string;
-  paperId: string;
+  provider: CitationProvider;
+  externalId: string;
   title: string;
   authors: Author[];
-  year: number;
-  venue: string;
+  year?: number;
+  venue?: string;
   abstract?: string;
-  doi?: string;
+  doi?: string | null;
   url?: string;
-  citationCount: number;
-  isOpenAccess: boolean;
+  citationCount?: number;
+  isOpenAccess?: boolean;
+  // Backward compatibility for existing in-memory callers.
+  id?: string;
+  paperId?: string;
 }
 
 export interface Author {
