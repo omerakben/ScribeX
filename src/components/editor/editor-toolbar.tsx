@@ -21,16 +21,25 @@ import {
   Loader2,
   PanelRightClose,
   PanelRightOpen,
+  Wand2,
+  Waves,
   Quote,
+  Sigma,
   Strikethrough,
+  Superscript as SuperscriptIcon,
+  Subscript as SubscriptIcon,
   Underline as UnderlineIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { useEditorStore } from "@/lib/store/editor-store";
+import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select";
+import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
+import type { ReasoningEffort } from "@/lib/types";
 import type { Editor } from "@tiptap/react";
 
 interface EditorToolbarProps {
   editor: Editor | null;
+  onSave?: () => void;
 }
 
 const statusConfig: Record<string, { label: string; className: string }> = {
@@ -57,7 +66,7 @@ const statusConfig: Record<string, { label: string; className: string }> = {
 };
 
 function ToolbarDivider() {
-  return <div className="mx-1 h-5 w-px bg-ink-200" aria-hidden="true" />;
+  return <div className="mx-1.5 h-6 w-px bg-ink-200" aria-hidden="true" />;
 }
 
 function ToolbarButton({
@@ -82,7 +91,7 @@ function ToolbarButton({
       aria-label={title}
       aria-pressed={isActive}
       className={cn(
-        "flex h-7 w-7 items-center justify-center rounded-md transition-colors",
+        "flex h-8 w-8 items-center justify-center rounded-md transition-colors [&>svg]:h-[18px] [&>svg]:w-[18px]",
         isActive
           ? "bg-ink-100 text-ink-900"
           : "text-ink-500 hover:bg-ink-100 hover:text-ink-700",
@@ -94,19 +103,23 @@ function ToolbarButton({
   );
 }
 
-export function EditorToolbar({ editor }: EditorToolbarProps) {
+export function EditorToolbar({ editor, onSave }: EditorToolbarProps) {
   const router = useRouter();
 
   const currentPaper = useEditorStore((s) => s.currentPaper);
-  const papers = useEditorStore((s) => s.papers);
-  const setPapers = useEditorStore((s) => s.setPapers);
-  const setCurrentPaper = useEditorStore((s) => s.setCurrentPaper);
+  const savePaper = useEditorStore((s) => s.savePaper);
 
   const wordCount = useEditorStore((s) => s.wordCount);
   const aiPanelOpen = useEditorStore((s) => s.aiPanelOpen);
   const toggleAIPanel = useEditorStore((s) => s.toggleAIPanel);
   const isDirty = useEditorStore((s) => s.isDirty);
   const isSaving = useEditorStore((s) => s.isSaving);
+  const reasoningEffort = useEditorStore((s) => s.reasoningEffort);
+  const setReasoningEffort = useEditorStore((s) => s.setReasoningEffort);
+  const autocompleteEnabled = useEditorStore((s) => s.autocompleteEnabled);
+  const setAutocompleteEnabled = useEditorStore((s) => s.setAutocompleteEnabled);
+  const diffusionEnabled = useEditorStore((s) => s.diffusionEnabled);
+  const setDiffusionEnabled = useEditorStore((s) => s.setDiffusionEnabled);
 
   const [titleDrafts, setTitleDrafts] = useState<Record<string, string>>({});
   const title = currentPaper
@@ -119,14 +132,7 @@ export function EditorToolbar({ editor }: EditorToolbarProps) {
     const trimmed = title.trim() || "Untitled Paper";
     if (trimmed === currentPaper.title) return;
 
-    const updatedPaper = {
-      ...currentPaper,
-      title: trimmed,
-      updatedAt: new Date().toISOString(),
-    };
-
-    setCurrentPaper(updatedPaper);
-    setPapers(papers.map((entry) => (entry.id === currentPaper.id ? updatedPaper : entry)));
+    savePaper(currentPaper.id, { title: trimmed });
     setTitleDrafts((state) => {
       const next = { ...state };
       delete next[currentPaper.id];
@@ -198,11 +204,86 @@ export function EditorToolbar({ editor }: EditorToolbarProps) {
           ) : null}
         </div>
 
-        {/* Right: word count, AI toggle, export, save indicator */}
+        {/* Right: word count, reasoning effort, AI toggle, export, save indicator */}
         <div className="flex items-center gap-1">
           <span className="mr-1 text-xs text-ink-400 tabular-nums">
             {wordCount.toLocaleString()} words
           </span>
+
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div>
+                  <Select
+                    value={reasoningEffort}
+                    onValueChange={(value) => setReasoningEffort(value as ReasoningEffort)}
+                  >
+                    <SelectTrigger
+                      className="h-7 w-[112px] border-ink-200 bg-white text-xs text-ink-600 shadow-none focus:ring-1 focus:ring-brand-500"
+                      aria-label="Reasoning effort"
+                    >
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="instant" className="text-xs">Instant</SelectItem>
+                      <SelectItem value="low" className="text-xs">Low</SelectItem>
+                      <SelectItem value="medium" className="text-xs">Medium</SelectItem>
+                      <SelectItem value="high" className="text-xs">High</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </TooltipTrigger>
+              <TooltipContent side="bottom">
+                Controls AI quality/speed tradeoff
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  onClick={() => setAutocompleteEnabled(!autocompleteEnabled)}
+                  aria-label={autocompleteEnabled ? "Disable autocomplete" : "Enable autocomplete"}
+                  className={cn(
+                    "h-7 w-7 flex items-center justify-center rounded-md transition-colors",
+                    autocompleteEnabled
+                      ? "bg-mercury-50 text-mercury-600"
+                      : "text-ink-400 hover:text-ink-600 hover:bg-ink-50"
+                  )}
+                >
+                  <Wand2 className="h-3.5 w-3.5" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom">
+                {autocompleteEnabled ? "Disable autocomplete" : "Enable autocomplete"}
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  onClick={() => setDiffusionEnabled(!diffusionEnabled)}
+                  aria-label={diffusionEnabled ? "Disable diffusion effect" : "Enable diffusion effect"}
+                  className={cn(
+                    "h-7 w-7 flex items-center justify-center rounded-md transition-colors",
+                    diffusionEnabled
+                      ? "bg-mercury-50 text-mercury-600"
+                      : "text-ink-400 hover:text-ink-600 hover:bg-ink-50"
+                  )}
+                >
+                  <Waves className="h-3.5 w-3.5" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom">
+                {diffusionEnabled ? "Disable diffusion effect" : "Enable diffusion effect"}
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
 
           <button
             type="button"
@@ -229,7 +310,13 @@ export function EditorToolbar({ editor }: EditorToolbarProps) {
             <Download className="h-4 w-4" />
           </button>
 
-          <span className="ml-1 inline-flex min-w-[56px] items-center justify-end gap-1 text-xs text-ink-400">
+          <button
+            type="button"
+            onClick={() => isDirty && onSave?.()}
+            disabled={!isDirty || isSaving}
+            className="ml-1 inline-flex min-w-[56px] items-center justify-end gap-1 text-xs text-ink-400 hover:text-ink-600 transition-colors disabled:cursor-default disabled:hover:text-ink-400"
+            aria-label={isSaving ? "Saving" : isDirty ? "Save now" : "All changes saved"}
+          >
             {isSaving ? (
               <>
                 <Loader2 className="h-3 w-3 animate-spin" />
@@ -243,13 +330,13 @@ export function EditorToolbar({ editor }: EditorToolbarProps) {
                 Saved
               </>
             )}
-          </span>
+          </button>
         </div>
       </div>
 
       {/* Formatting toolbar */}
       <div
-        className="flex h-10 items-center gap-0.5 overflow-x-auto border-b border-ink-100 bg-white px-4"
+        className="flex h-11 items-center justify-center gap-1 overflow-x-auto border-b border-ink-100 bg-white px-4"
         role="toolbar"
         aria-label="Editor formatting"
       >
@@ -284,6 +371,22 @@ export function EditorToolbar({ editor }: EditorToolbarProps) {
           disabled={toolbarDisabled}
         >
           <Strikethrough className="h-4 w-4" />
+        </ToolbarButton>
+        <ToolbarButton
+          title="Superscript"
+          isActive={editor?.isActive("superscript")}
+          onClick={() => editor?.chain().focus().toggleSuperscript().run()}
+          disabled={toolbarDisabled}
+        >
+          <SuperscriptIcon className="h-4 w-4" />
+        </ToolbarButton>
+        <ToolbarButton
+          title="Subscript"
+          isActive={editor?.isActive("subscript")}
+          onClick={() => editor?.chain().focus().toggleSubscript().run()}
+          disabled={toolbarDisabled}
+        >
+          <SubscriptIcon className="h-4 w-4" />
         </ToolbarButton>
 
         <ToolbarDivider />
@@ -346,6 +449,13 @@ export function EditorToolbar({ editor }: EditorToolbarProps) {
           disabled={toolbarDisabled}
         >
           <Code className="h-4 w-4" />
+        </ToolbarButton>
+        <ToolbarButton
+          title="Insert math"
+          onClick={() => editor?.chain().focus().insertInlineMath({ latex: 'E = mc^2' }).run()}
+          disabled={toolbarDisabled}
+        >
+          <Sigma className="h-4 w-4" />
         </ToolbarButton>
         <ToolbarButton
           title="Insert link"

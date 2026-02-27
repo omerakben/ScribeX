@@ -4,7 +4,7 @@ const columns = {
   Product: [
     { label: "Features", href: "#features" },
     { label: "Workflow", href: "#how-it-works" },
-    { label: "Pricing", href: "#pricing" },
+    { label: "Contact", href: "#contact" },
     { label: "Templates", href: "/dashboard/templates" },
   ],
   Research: [
@@ -16,7 +16,7 @@ const columns = {
   Company: [
     { label: "About", href: "#" },
     { label: "Changelog", href: "#" },
-    { label: "Contact", href: "#" },
+    { label: "Contact", href: "https://tuel.ai/#contact" },
     { label: "Status", href: "#" },
   ],
 };

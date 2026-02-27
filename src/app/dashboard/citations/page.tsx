@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { ClipboardList, Trash2 } from "lucide-react";
 import { TopBar } from "@/components/dashboard/top-bar";
 import { CitationSearch } from "@/components/editor/citation-search";
+import { getCitationEntityId } from "@/lib/constants";
 import type { Citation } from "@/lib/types";
 
 export default function CitationsPage() {
@@ -12,8 +13,9 @@ export default function CitationsPage() {
   const totalCitations = useMemo(() => library.length, [library]);
 
   const handleInsert = (citation: Citation) => {
+    const citationId = getCitationEntityId(citation);
     setLibrary((prev) => {
-      if (prev.some((entry) => entry.paperId === citation.paperId)) return prev;
+      if (prev.some((entry) => getCitationEntityId(entry) === citationId)) return prev;
       return [citation, ...prev];
     });
   };
@@ -57,7 +59,7 @@ export default function CitationsPage() {
                 <div className="flex-1 overflow-auto space-y-3">
                   {library.map((citation) => (
                     <article
-                      key={citation.paperId}
+                      key={getCitationEntityId(citation)}
                       className="rounded-lg border border-ink-200 bg-ink-50 p-3"
                     >
                       <p className="line-clamp-2 text-sm text-ink-700 font-medium">{citation.title}</p>

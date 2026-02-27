@@ -2,13 +2,15 @@
 
 import { useCallback, useRef, useState } from "react";
 import { ExternalLink, Loader2, Search } from "lucide-react";
-import type { Citation } from "@/lib/types";
+import type { Citation, CitationStyleId } from "@/lib/types";
+import { getCitationEntityId } from "@/lib/constants";
 
 interface CitationSearchProps {
+  styleId?: CitationStyleId;
   onInsert: (citation: Citation) => void;
 }
 
-export function CitationSearch({ onInsert }: CitationSearchProps) {
+export function CitationSearch({ styleId = "apa-7", onInsert }: CitationSearchProps) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<Citation[]>([]);
   const [total, setTotal] = useState(0);
@@ -66,7 +68,7 @@ export function CitationSearch({ onInsert }: CitationSearchProps) {
               handleSearch();
             }
           }}
-          placeholder="Search papers, topics, or DOI"
+          placeholder={`Search papers, topics, or DOI (${styleId})`}
           className="flex-1 border border-ink-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 placeholder:text-ink-400 font-sans text-ink-800"
         />
         <button
@@ -94,11 +96,14 @@ export function CitationSearch({ onInsert }: CitationSearchProps) {
           <p className="text-xs text-ink-400 pb-1">{total.toLocaleString()} results</p>
         ) : null}
 
-        {results.map((citation) => (
-          <article
-            key={citation.id}
-            className="border border-ink-200 rounded-lg p-3 hover:border-ink-300 transition-colors"
-          >
+        {results.map((citation) => {
+          const citationCount = citation.citationCount ?? 0;
+
+          return (
+            <article
+              key={getCitationEntityId(citation)}
+              className="border border-ink-200 rounded-lg p-3 hover:border-ink-300 transition-colors"
+            >
             <h3 className="text-sm font-medium text-ink-900 line-clamp-2">{citation.title}</h3>
 
             <p className="text-xs text-ink-500 mt-1 line-clamp-1">
@@ -108,8 +113,8 @@ export function CitationSearch({ onInsert }: CitationSearchProps) {
             <div className="flex items-center gap-3 mt-2 text-xs text-ink-400">
               {citation.year ? <span>{citation.year}</span> : null}
               {citation.venue ? <span className="line-clamp-1">{citation.venue}</span> : null}
-              {citation.citationCount > 0 ? (
-                <span>{citation.citationCount.toLocaleString()} cites</span>
+              {citationCount > 0 ? (
+                <span>{citationCount.toLocaleString()} cites</span>
               ) : null}
               {citation.isOpenAccess ? (
                 <span className="bg-emerald-50 text-emerald-700 px-1.5 py-0.5 rounded text-[10px] font-medium">
@@ -138,8 +143,9 @@ export function CitationSearch({ onInsert }: CitationSearchProps) {
                 </a>
               ) : null}
             </div>
-          </article>
-        ))}
+            </article>
+          );
+        })}
       </div>
     </div>
   );

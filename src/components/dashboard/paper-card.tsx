@@ -51,13 +51,14 @@ export function PaperCard({ paper }: PaperCardProps) {
   const router = useRouter();
   const papers = useEditorStore((s) => s.papers);
   const setPapers = useEditorStore((s) => s.setPapers);
+  const deletePaper = useEditorStore((s) => s.deletePaper);
 
   const metadata = useMemo(
     () => ({
       updatedLabel: relativeTime(paper.updatedAt),
       templateLabel: PAPER_TEMPLATES[paper.template]?.label ?? paper.template,
     }),
-    [paper]
+    [paper.updatedAt, paper.template]
   );
 
   const handleOpen = () => {
@@ -81,7 +82,12 @@ export function PaperCard({ paper }: PaperCardProps) {
   };
 
   const handleDelete = () => {
-    setPapers(papers.filter((entry) => entry.id !== paper.id));
+    const confirmed = window.confirm(
+      `Delete "${paper.title}"? This cannot be undone.`
+    );
+    if (confirmed) {
+      deletePaper(paper.id);
+    }
   };
 
   return (

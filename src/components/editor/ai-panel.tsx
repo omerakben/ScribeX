@@ -2,17 +2,26 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
+  ArrowDownToLine,
   BookOpen,
   ChevronRight,
   ClipboardCheck,
+  Copy,
   ListTree,
   Loader2,
   MessageSquare,
   Send,
 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
-import { streamChatCompletion } from "@/lib/mercury/client";
+import { markdownToHtml } from "@/lib/utils/markdown-to-html";
+import { streamChatCompletion, structuredChatCompletion } from "@/lib/mercury/client";
 import { useEditorStore } from "@/lib/store/editor-store";
+import {
+  getCitationEntityId,
+  isNumericCitationStyle,
+  normalizeCitationStyleSelection,
+  REVIEW_JSON_SCHEMA,
+} from "@/lib/constants";
 import { CitationSearch } from "@/components/editor/citation-search";
 import type { AIMessage, AIPanelMode, Citation } from "@/lib/types";
 import type { Editor } from "@tiptap/react";
@@ -28,6 +37,36 @@ const TABS: { mode: AIPanelMode; label: string; Icon: React.ComponentType<{ clas
   { mode: "outline", label: "Outline", Icon: ListTree },
 ];
 
+function formatCitationAuthors(citation: Citation): string {
+  const authors = citation.authors;
+  if (authors.length === 0) return "Unknown";
+  if (authors.length === 1) return authors[0].name;
+  if (authors.length === 2) return `${authors[0].name} & ${authors[1].name}`;
+  return `${authors[0].name} et al.`;
+}
+
+function getHighestCitationIndex(editor: Editor | null): number {
+  if (!editor) return 0;
+
+  let maxIndex = 0;
+
+  const text = editor.getText();
+  const bracketMatches = text.matchAll(/\[(\d+)\]/g);
+  for (const match of bracketMatches) {
+    const value = Number(match[1]);
+    if (Number.isFinite(value)) maxIndex = Math.max(maxIndex, value);
+  }
+
+  const html = editor.getHTML();
+  const superscriptMatches = html.matchAll(/<sup>(\d+)<\/sup>/g);
+  for (const match of superscriptMatches) {
+    const value = Number(match[1]);
+    if (Number.isFinite(value)) maxIndex = Math.max(maxIndex, value);
+  }
+
+  return maxIndex;
+}
+
 // ─── Chat Tab ──────────────────────────────────────────────────
 
 function ChatTab({ editor }: { editor: Editor | null }) {
@@ -37,10 +76,19 @@ function ChatTab({ editor }: { editor: Editor | null }) {
   const updateLastAIMessage = useEditorStore((s) => s.updateLastAIMessage);
   const setIsAIStreaming = useEditorStore((s) => s.setIsAIStreaming);
   const clearAIMessages = useEditorStore((s) => s.clearAIMessages);
+  const reasoningEffort = useEditorStore((s) => s.reasoningEffort);
 
   const [input, setInput] = useState("");
   const abortRef = useRef<AbortController | null>(null);
   const endRef = useRef<HTMLDivElement>(null);
+
+  const handleInsertAtCursor = useCallback(
+    (content: string) => {
+      if (!editor) return;
+      editor.chain().focus().insertContent(markdownToHtml(content)).run();
+    },
+    [editor]
+  );
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -95,6 +143,7 @@ function ChatTab({ editor }: { editor: Editor | null }) {
     ];
 
     await streamChatCompletion(contextMessages, {
+      reasoningEffort,
       onChunk: (chunk) => {
         accumulated += chunk;
         updateLastAIMessage(accumulated);
@@ -113,6 +162,7 @@ function ChatTab({ editor }: { editor: Editor | null }) {
     isStreaming,
     editor,
     aiMessages,
+    reasoningEffort,
     addAIMessage,
     updateLastAIMessage,
     setIsAIStreaming,
@@ -139,19 +189,45 @@ function ChatTab({ editor }: { editor: Editor | null }) {
                 message.role === "user" ? "justify-end" : "justify-start"
               )}
             >
-              <div
-                className={cn(
-                  "max-w-[85%] whitespace-pre-wrap text-sm",
-                  message.role === "user"
-                    ? "bg-brand-600 text-white rounded-2xl rounded-br-md px-4 py-2.5"
-                    : "bg-ink-50 text-ink-700 rounded-2xl rounded-bl-md px-4 py-2.5 leading-relaxed"
-                )}
-              >
-                {message.content || (
-                  <span className="inline-flex items-center gap-1.5 text-ink-400">
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    Thinking
-                  </span>
+              <div className="flex flex-col max-w-[85%]">
+                <div
+                  className={cn(
+                    "whitespace-pre-wrap text-sm",
+                    message.role === "user"
+                      ? "bg-brand-600 text-white rounded-2xl rounded-br-md px-4 py-2.5"
+                      : "bg-ink-50 text-ink-700 rounded-2xl rounded-bl-md px-4 py-2.5 leading-relaxed"
+                  )}
+                >
+                  {message.content || (
+                    <span className="inline-flex items-center gap-1.5 text-ink-400">
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      Thinking
+                    </span>
+                  )}
+                </div>
+
+                {/* Action buttons for completed assistant messages */}
+                {message.role === "assistant" && message.content && !message.isStreaming && (
+                  <div className="flex items-center gap-3 mt-1.5 ml-1">
+                    <button
+                      type="button"
+                      onClick={() => handleInsertAtCursor(message.content)}
+                      className="inline-flex items-center gap-1 text-xs text-ink-400 hover:text-brand-600 transition-colors"
+                      title="Insert at cursor position in editor"
+                    >
+                      <ArrowDownToLine className="h-3 w-3" />
+                      Insert
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => navigator.clipboard.writeText(message.content)}
+                      className="inline-flex items-center gap-1 text-xs text-ink-400 hover:text-ink-600 transition-colors"
+                      title="Copy to clipboard"
+                    >
+                      <Copy className="h-3 w-3" />
+                      Copy
+                    </button>
+                  </div>
                 )}
               </div>
             </article>
@@ -221,6 +297,7 @@ function ReviewTab({ editor }: { editor: Editor | null }) {
   const [results, setResults] = useState<ReviewCategory[]>([]);
   const setActiveWritingMode = useEditorStore((s) => s.setActiveWritingMode);
   const setIsAIStreaming = useEditorStore((s) => s.setIsAIStreaming);
+  const reasoningEffort = useEditorStore((s) => s.reasoningEffort);
 
   const runReview = useCallback(async () => {
     if (!editor) return;
@@ -232,62 +309,32 @@ function ReviewTab({ editor }: { editor: Editor | null }) {
     setActiveWritingMode("review");
     setIsAIStreaming(true);
 
-    let accumulated = "";
-
-    await streamChatCompletion(
-      [
+    try {
+      const response = await structuredChatCompletion<{ categories: ReviewCategory[] }>(
+        [
+          {
+            role: "user",
+            content: `Review this academic manuscript. Score each category 1-10 and provide 2-3 sentences of actionable feedback.\n\nManuscript:\n${content}`,
+          },
+        ],
+        REVIEW_JSON_SCHEMA,
+        { reasoningEffort }
+      );
+      setResults(response.categories);
+    } catch {
+      setResults([
         {
-          role: "user",
-          content: `Review this academic manuscript and return exactly valid JSON array with four items. Use this schema:
-[
-  {"label": "Structure", "score": <1-10>, "feedback": "<2-3 sentences>"},
-  {"label": "Argument Flow", "score": <1-10>, "feedback": "<2-3 sentences>"},
-  {"label": "Tone", "score": <1-10>, "feedback": "<2-3 sentences>"},
-  {"label": "Citations", "score": <1-10>, "feedback": "<2-3 sentences>"}
-]
-
-Manuscript:\n${content}`,
+          label: "Request Error",
+          score: 0,
+          feedback: "Review request failed. Please try again.",
         },
-      ],
-      {
-        onChunk: (chunk) => {
-          accumulated += chunk;
-        },
-        onDone: () => {
-          try {
-            const jsonMatch = accumulated.match(/\[[\s\S]*\]/);
-            if (!jsonMatch) throw new Error("No JSON");
-            const parsed = JSON.parse(jsonMatch[0]);
-            setResults(parsed);
-          } catch {
-            setResults([
-              {
-                label: "Parse Error",
-                score: 0,
-                feedback: "Could not parse structured review output. Please run review again.",
-              },
-            ]);
-          } finally {
-            setIsReviewing(false);
-            setIsAIStreaming(false);
-            setActiveWritingMode(null);
-          }
-        },
-        onError: () => {
-          setResults([
-            {
-              label: "Request Error",
-              score: 0,
-              feedback: "Review request failed. Please try again.",
-            },
-          ]);
-          setIsReviewing(false);
-          setIsAIStreaming(false);
-          setActiveWritingMode(null);
-        },
-      }
-    );
-  }, [editor, setActiveWritingMode, setIsAIStreaming]);
+      ]);
+    } finally {
+      setIsReviewing(false);
+      setIsAIStreaming(false);
+      setActiveWritingMode(null);
+    }
+  }, [editor, reasoningEffort, setActiveWritingMode, setIsAIStreaming]);
 
   const getScoreColor = (score: number) => {
     if (score >= 8) return "text-emerald-600";
@@ -432,27 +479,92 @@ export function AIPanel({ editor }: AIPanelProps) {
   const aiPanelOpen = useEditorStore((s) => s.aiPanelOpen);
   const aiPanelMode = useEditorStore((s) => s.aiPanelMode);
   const setAIPanelMode = useEditorStore((s) => s.setAIPanelMode);
+  const currentPaper = useEditorStore((s) => s.currentPaper);
+  const papers = useEditorStore((s) => s.papers);
+  const setPapers = useEditorStore((s) => s.setPapers);
+  const setCurrentPaper = useEditorStore((s) => s.setCurrentPaper);
+  const citationIndexMapRef = useRef<Map<string, number>>(new Map());
+
+  useEffect(() => {
+    citationIndexMapRef.current.clear();
+  }, [currentPaper?.id]);
+
+  const upsertCitationReference = useCallback(
+    (citation: Citation): number | undefined => {
+      if (!currentPaper) return undefined;
+
+      const references = currentPaper.references ?? [];
+      const citationId = getCitationEntityId(citation);
+      const existingIndex = references.findIndex(
+        (entry) => getCitationEntityId(entry) === citationId
+      );
+
+      if (existingIndex >= 0) return existingIndex + 1;
+
+      const nextReferences = [...references, citation];
+      const now = new Date().toISOString();
+      const updatedPaper = {
+        ...currentPaper,
+        references: nextReferences,
+        updatedAt: now,
+      };
+
+      setCurrentPaper(updatedPaper);
+      setPapers(
+        papers.some((entry) => entry.id === updatedPaper.id)
+          ? papers.map((entry) => (entry.id === updatedPaper.id ? updatedPaper : entry))
+          : [...papers, updatedPaper]
+      );
+      return nextReferences.length;
+    },
+    [currentPaper, papers, setCurrentPaper, setPapers]
+  );
 
   const handleInsertCitation = useCallback(
     (citation: Citation) => {
       if (!editor) return;
 
-      const authors = citation.authors;
-      let authorText = "Unknown";
-      if (authors.length === 1) authorText = authors[0].name;
-      if (authors.length === 2) authorText = `${authors[0].name} & ${authors[1].name}`;
-      if (authors.length > 2) authorText = `${authors[0].name} et al.`;
+      const style = normalizeCitationStyleSelection(currentPaper?.citationStyle);
+      const referenceIndex = upsertCitationReference(citation);
 
-      editor.chain().focus().insertContent(`(${authorText}, ${citation.year || "n.d."})`).run();
+      if (isNumericCitationStyle(style)) {
+        const citationId = getCitationEntityId(citation);
+        let index = referenceIndex ?? citationIndexMapRef.current.get(citationId);
+
+        if (!index) {
+          const mappedMax = Math.max(...Array.from(citationIndexMapRef.current.values()), 0);
+          const docMax = getHighestCitationIndex(editor);
+          index = Math.max(mappedMax, docMax) + 1;
+        }
+        citationIndexMapRef.current.set(citationId, index);
+
+        const marker =
+          style.id === "chicago-17" && style.chicagoVariant === "notes-bibliography"
+            ? `<sup>${index}</sup>`
+            : `[${index}]`;
+        editor.chain().focus().insertContent(marker).run();
+        return;
+      }
+
+      const authorText = formatCitationAuthors(citation);
+      const yearText = citation.year ? String(citation.year) : "n.d.";
+      const marker =
+        style.id === "mla-9"
+          ? `(${authorText})`
+          : style.id === "chicago-17" && style.chicagoVariant === "author-date"
+          ? `(${authorText} ${yearText})`
+          : `(${authorText}, ${yearText})`;
+
+      editor.chain().focus().insertContent(marker).run();
     },
-    [editor]
+    [currentPaper?.citationStyle, editor, upsertCitationReference]
   );
 
   if (!aiPanelOpen) return null;
 
   return (
     <aside
-      className="w-[320px] border-l border-ink-200 bg-white flex flex-col h-full shrink-0"
+      className="w-[400px] border-l border-ink-200 bg-white flex flex-col h-full shrink-0"
       aria-label="AI panel"
     >
       {/* Panel header */}
@@ -496,7 +608,10 @@ export function AIPanel({ editor }: AIPanelProps) {
         {aiPanelMode === "review" && <ReviewTab editor={editor} />}
         {aiPanelMode === "citations" && (
           <div className="p-4 flex flex-col h-full">
-            <CitationSearch onInsert={handleInsertCitation} />
+            <CitationSearch
+              styleId={normalizeCitationStyleSelection(currentPaper?.citationStyle).id}
+              onInsert={handleInsertCitation}
+            />
           </div>
         )}
         {aiPanelMode === "outline" && <OutlineTab editor={editor} />}
