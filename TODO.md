@@ -105,17 +105,19 @@
 
 ---
 
-## Phase 1: Floating Menu — Selection-Triggered AI Actions
+## Phase 1: Floating Menu — Selection-Triggered AI Actions ✅ COMPLETE (2026-02-28)
+
+> **STATUS: COMPLETE** — Commit `49401d4`. 8-agent swarm (2x Opus 4.6, 6x Sonnet 4.6). 9 files created/modified. 0 type errors, 0 lint errors.
 
 > The signature interaction pattern from AI Canvas. User selects text → floating menu appears with contextual AI actions. Two tiers: quick actions (gooey buttons) and detailed configuration (ribbon panel).
 
 ### 1.1 Selection Detection Engine
 
-- [ ] Build ProseMirror plugin that detects text selection in TipTap editor
-- [ ] 300ms debounce on selection changes (prevents flickering on drag-select)
-- [ ] Calculate selection position relative to viewport for menu placement
-- [ ] Implement viewport edge flip logic (menu flips direction near edges)
-- [ ] Dismiss on mousedown outside menu, Escape key, or new empty selection
+- [x] Build ProseMirror plugin that detects text selection in TipTap editor
+- [x] 300ms debounce on selection changes (prevents flickering on drag-select)
+- [x] Calculate selection position relative to viewport for menu placement
+- [x] Implement viewport edge flip logic (menu flips direction near edges)
+- [x] Dismiss on mousedown outside menu, Escape key, or new empty selection
 
 **AI Canvas Reference:**
 
@@ -130,11 +132,11 @@
 
 ### 1.2 Floating Action Buttons (Tier 1)
 
-- [ ] Design 4 primary action buttons that fan out from a sparkle trigger icon
-- [ ] Semantic color coding: green = AI actions (rewrite/fix), amber = stylize/humanize, teal = detection
-- [ ] Consider gooey SVG filter effect: `feGaussianBlur(stdDeviation=8)` + `feColorMatrix` for liquid merge visual
-- [ ] Alternatively, simpler framer-motion spring animation (evaluate which fits ScribeX's design)
-- [ ] Actions: Rewrite, Stylize, Humanize, Detect AI
+- [x] Design 4 primary action buttons that fan out from a sparkle trigger icon
+- [x] Semantic color coding: green = AI actions (rewrite/fix), amber = stylize/humanize, teal = detection
+- [x] Consider gooey SVG filter effect: `feGaussianBlur(stdDeviation=8)` + `feColorMatrix` for liquid merge visual
+- [x] Alternatively, simpler framer-motion spring animation (evaluate which fits ScribeX's design)
+- [x] Actions: Rewrite, Stylize, Humanize, Detect AI
 
 **AI Canvas Reference:**
 
@@ -151,11 +153,11 @@
 
 ### 1.3 Ribbon Panel (Tier 2 — Configuration)
 
-- [ ] When a tier-1 button is clicked, expand a configuration ribbon below/beside it
-- [ ] Ribbon shows action-specific options: tone selector, style chips, generation count
-- [ ] For Synonyms/Rewrite: show numbered alternatives as clickable chips
-- [ ] For Stylize: show 8 style chips (Professional, Creative, Bold, Minimal, Academic, Conversational, Poetic, Technical)
-- [ ] For Humanize: show "Generate" button with count selector
+- [x] When a tier-1 button is clicked, expand a configuration ribbon below/beside it
+- [x] Ribbon shows action-specific options: tone selector, style chips, generation count
+- [x] For Synonyms/Rewrite: show numbered alternatives as clickable chips
+- [x] For Stylize: show 8 style chips (Professional, Creative, Bold, Minimal, Academic, Conversational, Poetic, Technical)
+- [x] For Humanize: show "Generate" button with count selector
 
 **AI Canvas Reference:**
 
@@ -171,11 +173,11 @@
 
 ### 1.4 Apply/Decline Change Protocol
 
-- [ ] Parse AI responses for `\`\`\`change\nfind: ...\nreplace: ...\n\`\`\`` blocks
-- [ ] Render visual diff cards showing before → after for each change
-- [ ] Apply button: replace text in TipTap editor at the exact location
-- [ ] Decline button: dismiss the change, keep original text
-- [ ] Prevents silent overwrites — user always in control of every change
+- [x] Parse AI responses for `\`\`\`change\nfind: ...\nreplace: ...\n\`\`\`` blocks
+- [x] Render visual diff cards showing before → after for each change
+- [x] Apply button: replace text in TipTap editor at the exact location
+- [x] Decline button: dismiss the change, keep original text
+- [x] Prevents silent overwrites — user always in control of every change
 
 **AI Canvas Reference:**
 
@@ -874,7 +876,7 @@
 | P0       | 0     | Prompt Externalization            | High      | Low    | None         | ✅ Done  |
 | P0       | 0     | Selection Disambiguation          | High      | Low    | None         | ✅ Done  |
 | P0       | 0     | Document Source-of-Truth          | High      | Low    | Phase 0.1    | ✅ Done  |
-| P1       | 1     | Floating Menu (Selection Actions) | Very High | High   | Phase 0 ✅    | 🔜 Next  |
+| P1       | 1     | Floating Menu (Selection Actions) | Very High | High   | Phase 0 ✅    | ✅ Done  |
 | P1       | 2     | Humanizer Pipeline                | Very High | High   | Phase 0 ✅    | 🔜 Next  |
 | P1       | 5     | Readability Analyzer              | Medium    | Low    | None         | 🔜 Next  |
 | P1       | 8     | Temperature Engineering           | High      | Low    | Phase 0 ✅    | 🔜 Next  |
@@ -891,5 +893,277 @@
 
 *Generated: February 28, 2026*
 *Phase 0 completed: February 28, 2026 (7-agent swarm, 22 files)*
+*Phase 1 completed: February 28, 2026 (8-agent swarm, 9 files)*
 *Source: 10-agent parallel analysis of AI Canvas codebase (90+ files)*
 *Knowledge Base: `.claude/projects/-Users-ozzy-mac-Projects-ScribeX/memory/ai-canvas-knowledge-base.md`*
+
+---
+
+## Phase 2 Orchestration Prompt — Humanizer & AI Detection
+
+> Copy-paste this prompt into a fresh Claude Code session to deploy the Phase 2 swarm.
+> Mirrors the Phase 1 orchestration prompt structure exactly.
+
+### PROMPT START
+
+Hey Claude, I want you to deploy special agents — all under your centralized control — to build **Phase 2 (Humanizer & AI Detection)** of ScribeX. You are the **orchestrator**. You spawn agents, assign tasks, manage dependencies, and verify everything compiles.
+
+Use `TeamCreate` to create the team, `TaskCreate` to define the task graph, and `Agent` tool to spawn teammates. Run maximum parallelism where no dependencies exist. Each agent reports back to you. You verify at the end.
+
+---
+
+### Context: What's Already Done
+
+**Phase 0 — Prompt Architecture & Context Intelligence** ✅
+- 18 files in `src/lib/prompts/` — loader with `{{variable}}` interpolation, 13 per-command prompts, system/chat prompts, version tracking
+- `routePrompt()` in `src/lib/prompts/router.ts` — 2x2 matrix (short/long x context/standalone), composes truncation + disambiguation
+- `src/lib/utils/selection-markers.ts` — `<<<SELECTED>>>` markers for disambiguation
+- `src/lib/utils/context-window.ts` — `truncateAroundSelection()` with 60/40 split, paragraph boundary snapping
+
+**Phase 1 — Floating Menu** ✅ (Commit `49401d4`)
+- `src/lib/extensions/floating-menu-plugin.ts` — ProseMirror plugin for text selection detection, 300ms debounce, viewport edge flip, Escape/mousedown-outside dismiss
+- `src/components/editor/floating-menu.tsx` — 4-button fan-out (Rewrite, Simplify, Academic, Expand), Framer Motion spring animations
+- `src/components/editor/floating-ribbon.tsx` — Tier-2 expansion panel with 4 modes (rewrite, stylize, **humanize**, **detect**). **Humanize and Detect handlers are stubs — this is what Phase 2 wires up.**
+- `src/lib/utils/change-block-parser.ts` — Regex parser for ` ```change` blocks, `parseChangeBlocks()`, `hasChangeBlocks()`
+- `src/components/editor/change-diff-card.tsx` — Visual diff card with Apply/Decline, ProseMirror text replacement
+- `src/lib/prompts/assistant/chat.ts` — SUGGESTING EDITS section instructs AI to use change block format
+- `src/lib/store/editor-store.ts` — `updateLastAIMessage(content, isStreaming?)` extended to clear streaming flag
+
+**Key Infrastructure:**
+- Mercury API client: `src/lib/mercury/client.ts` — `streamChatCompletion()`, `structuredChatCompletion<T>()`, `applyEdit()`, `fimCompletion()`
+- All AI calls route through `/api/mercury` (never direct external API)
+- Zustand store: `src/lib/store/editor-store.ts` — `useEditorStore` with persist middleware
+- Design system: `brand-*` (navy), `mercury-*` (teal), `ink-*` (stone), Framer Motion, Manrope/Newsreader fonts
+- Prompt system: `src/lib/prompts/loader.ts` — `getCommandPrompt(action, vars?)` with `{{variable}}` interpolation
+
+---
+
+### What To Build Now: Phase 2 — Humanizer & AI Detection
+
+#### Task 1: Research Agent (Opus 4.6)
+
+**Goal:** Deep-dive the AI Canvas humanizer implementation and produce a ScribeX implementation map.
+
+**Read these AI Canvas files:**
+- `AI_CANVAS_Example/AI-Canvas/data/humanizer008.json` — curated few-shot dataset (8th iteration, hundreds of before/after pairs)
+- `AI_CANVAS_Example/AI-Canvas/api/humanizer/gemini001.php` — few-shot pipeline: load dataset → random sample → build chat history → API call
+- `AI_CANVAS_Example/AI-Canvas/api/pangram.php` — AI detection proxy with `x-api-key` auth
+- `AI_CANVAS_Example/AI-Canvas/prompts/humanize/humanize.txt` — batch humanization prompt with `{{count}}` placeholder
+- `AI_CANVAS_Example/AI-Canvas/prompts/humanize/humanize-one.txt` — minimal "one more" prompt (no persona, plain text, fast)
+- `AI_CANVAS_Example/AI-Canvas/prompts/humanize/humanize-no-context.txt` — standalone humanization without document context
+- `AI_CANVAS_Example/AI-Canvas/js/modules/ui/HumanizerMenu.js` — UI for alternatives list, generate-more button
+- `AI_CANVAS_Example/AI-Canvas/js/modules/ui/AIDetectorPanel.js` — score display, chunk cards, report modal, history
+- `AI_CANVAS_Example/AI-Canvas/css/modules/ai-detector.css` — score badge colors, liquid fill scan animation
+- `AI_CANVAS_Example/AI-Canvas/js/modules/ui/InlineSuggestions.js` — temperature ramping: `baseTemp + (variantIndex * 0.15)`
+
+**Also read ScribeX files for integration context:**
+- `src/components/editor/floating-ribbon.tsx` — the humanize/detect stub handlers to replace
+- `src/lib/mercury/client.ts` — understand existing API patterns
+- `src/lib/prompts/loader.ts` — understand prompt system for registration
+- `src/lib/store/editor-store.ts` — understand state management patterns
+
+**Deliverable:** A detailed implementation map document covering:
+1. Dataset structure analysis (how to adapt humanizer008.json for Mercury/academic domain)
+2. Pipeline architecture (few-shot → Mercury API translation)
+3. Temperature strategy (1.4 base, +0.15 ramping, how to implement in Mercury client)
+4. Detection API options (Pangram vs alternatives, API key management)
+5. UI patterns → ScribeX component map
+
+---
+
+#### Task 2: Humanizer Dataset & Sampler (Sonnet 4.6) — blocked by Task 1
+
+**Files to create:**
+- `src/lib/humanizer/dataset.ts` — Dataset loader and random few-shot sampler
+- `src/data/humanizer-dataset.json` — Curated academic-domain before/after pairs
+
+**Requirements:**
+- Study `humanizer008.json` structure from Task 1 research
+- Curate academic-specific pairs (not just generic AI text → human text)
+- Build `sampleFewShot(n: number)` → returns array of `{ai: string, human: string}` pairs
+- Convert sampled pairs to Mercury chat message format: `[{role: "user", content: ai}, {role: "assistant", content: human}]`
+- Export `HumanizerExample` type, `loadDataset()`, `sampleFewShot()`
+
+---
+
+#### Task 3: Humanizer Pipeline (Sonnet 4.6) — blocked by Task 1
+
+**Files to create/modify:**
+- `src/lib/humanizer/pipeline.ts` — Few-shot request builder
+- Modify `src/lib/mercury/client.ts` — Add `humanize()` method
+
+**Requirements:**
+- Build `humanize(text: string, options: HumanizeOptions)` in pipeline.ts
+- `HumanizeOptions`: `{ count: number, existing?: string[], temperature?: number }`
+- Use dataset sampler to build few-shot context for each request
+- Temperature strategy: base 1.4, +0.15 per variant index (variant 0 = 1.4, variant 1 = 1.55, variant 2 = 1.7, variant 3 = 1.85)
+- Parallel request support: `Promise.allSettled()` for initial batch (4 concurrent)
+- Pass `existing` alternatives to prompt for deduplication
+- Add `humanize()` convenience method to `mercury/client.ts` that calls the pipeline
+
+---
+
+#### Task 4: Humanizer Prompts (Sonnet 4.6) — parallel with Task 3, blocked by Task 1
+
+**Files to create/modify:**
+- `src/lib/prompts/commands/humanize.ts` — Batch humanization prompt
+- `src/lib/prompts/commands/humanize-one.ts` — Incremental "one more" prompt
+- Modify `src/lib/prompts/loader.ts` — Register new prompts
+
+**Requirements:**
+- Batch prompt: accepts `{{count}}` for number of alternatives, `{{text}}` for input
+- Incremental prompt: minimal, no persona, plain text return, `{{existing}}` for dedup list
+- Follow existing prompt patterns in `src/lib/prompts/commands/` (look at `generate.ts`, `rewrite.ts`)
+- Register both in `loader.ts` action map
+- Wire `{{count}}`, `{{text}}`, `{{existing}}` interpolation variables
+
+---
+
+#### Task 5: Humanizer UI Panel (Sonnet 4.6) — blocked by Tasks 3 & 4
+
+**Files to create/modify:**
+- `src/components/editor/humanizer-panel.tsx` — New component
+- Modify `src/components/editor/floating-ribbon.tsx` — Replace humanize stubs
+
+**Requirements:**
+- 3-tier UX pattern:
+  1. **Initial batch**: Generate 4 humanized alternatives simultaneously on open
+  2. **"More" button**: Generate 1 additional alternative incrementally
+  3. **Deduplication**: Pass existing alternatives to prompt so AI never repeats
+- Alternative chips: numbered (1-N), clickable to apply (replaces selected text in editor)
+- "Past last = generate more" — scrolling past the last alternative triggers generation
+- Loading states with `Loader2` spinner (matches existing patterns)
+- Design system: `brand-*`/`mercury-*`/`ink-*` colors, Framer Motion animations
+- Wire into `floating-ribbon.tsx` `handleHumanizeGenerate()` — replace the `setTimeout` stub
+- Get editor reference and selection range from floating-ribbon props
+
+---
+
+#### Task 6: AI Detection System (Sonnet 4.6) — blocked by Task 1
+
+**Files to create/modify:**
+- `src/app/api/detect/route.ts` — New API route (proxy to detection service)
+- `src/components/editor/ai-detection-badge.tsx` — New component
+- Modify `src/components/editor/floating-ribbon.tsx` — Replace detect stubs
+- Modify `src/middleware.ts` — Add rate limiting for `/api/detect`
+
+**Requirements:**
+- API route: accept `{ text: string }`, proxy to Pangram or equivalent detection API
+- Use `DETECTION_API_KEY` env var (server-side only)
+- Return `{ score: number, sentences?: { text: string, score: number }[] }`
+- Score badge component: color-coded (green < 30%, amber 30-60%, red > 60%)
+- CSS scan animation while detection runs (match existing `shimmer`/`pulse-glow` keyframe patterns)
+- Rate limiting: 10 req/min per IP for detection endpoint (separate from general 60/min)
+- Wire into `floating-ribbon.tsx` `DetectContent` — replace the "Coming in Phase 2" placeholder
+- Add `DETECTION_API_KEY` to env vars documentation
+
+---
+
+#### Task 7: Integration Agent (Opus 4.6) — blocked by Tasks 5 & 6
+
+**Goal:** Wire everything together and ensure Phase 1 features remain intact.
+
+**Responsibilities:**
+- Wire humanizer panel into floating menu → ribbon → panel flow
+- Ensure humanize button in floating-menu.tsx triggers ribbon humanize mode
+- Ensure ribbon humanize mode opens humanizer panel with selected text
+- Connect AI detection badge to floating menu detect mode
+- Update `editor-store.ts` if new state is needed (e.g., `humanizerAlternatives`, `detectionScore`)
+- Verify Phase 1 features still work:
+  - Text selection → floating menu appears
+  - Rewrite/Simplify/Academic/Expand buttons work
+  - Change block cards render in chat with Apply/Decline
+  - Chat panel works normally
+- Verify no import cycles or circular dependencies
+
+---
+
+#### Task 8: Verification (Opus 4.6) — blocked by Task 7
+
+**Run all quality gates:**
+1. `npx tsc --noEmit` — 0 type errors
+2. `pnpm lint` — 0 new errors (pre-existing AI Canvas warnings OK)
+3. `NODE_ENV=production pnpm build` — success (only `/_global-error` prerender failure, which is the known Next.js 16.1.6 regression)
+4. Browser test (if Chrome MCP available):
+   - Select text in editor → floating menu appears
+   - Click Humanize → ribbon opens → alternatives generate
+   - Click an alternative → text replaced in editor
+   - Click Detect → detection score badge appears
+   - Phase 1 features all still work
+
+**If any gate fails:** fix the issue and re-verify. Report all fixes to orchestrator.
+
+---
+
+#### Task 9: Documentation (Sonnet 4.6) — blocked by Task 8
+
+**Files to update:**
+- `TODO.md` — Check off Phase 2 items (2.1-2.4)
+- `CLAUDE.md` — Document new humanizer and detection architecture
+- `memory/MEMORY.md` — Add Phase 2 section with key decisions and file paths
+- Create `memory/phase2-execution-log.md` — Task completion log
+
+---
+
+### Key Constraints
+
+1. **Design System**: `brand-*`/`mercury-*`/`ink-*` color scales, Framer Motion for animations, Manrope (UI) / Newsreader (editor body) fonts
+2. **Mercury API**: All AI calls route through `src/lib/mercury/client.ts` → `/api/mercury`. Never call external APIs directly from client code.
+3. **Prompt System**: Use Phase 0 infrastructure — `getCommandPrompt()` from `loader.ts`, `{{variable}}` interpolation, register in action map
+4. **Phase 1 Preserved**: Floating menu, change block cards, chat — all must continue working after Phase 2 changes
+5. **Dataset Quality**: Humanizer before/after pairs must be academic-domain specific (research papers, essays, theses — not generic AI text)
+6. **Temperature Strategy**: Base 1.4, +0.15 per variant index — creates genuine diversity through different sampling temperature, not just rephrasing
+7. **State Management**: Use existing Zustand `useEditorStore` patterns — add new fields if needed, persist only what's necessary
+
+### Agent Model Assignment
+
+| Task | Agent Type | Model | Why |
+|------|-----------|-------|-----|
+| Task 1: Research | Explore → general-purpose | Opus 4.6 | Deep reasoning across 10+ reference files |
+| Task 2: Dataset | general-purpose | Sonnet 4.6 | Focused data curation and TypeScript |
+| Task 3: Pipeline | general-purpose | Sonnet 4.6 | Clean implementation of well-defined pipeline |
+| Task 4: Prompts | general-purpose | Sonnet 4.6 | Prompt writing follows existing patterns |
+| Task 5: UI Panel | general-purpose | Sonnet 4.6 | React component matching existing design |
+| Task 6: Detection | general-purpose | Sonnet 4.6 | API route + component, straightforward |
+| Task 7: Integration | general-purpose | Opus 4.6 | Cross-cutting wiring, must reason about side effects |
+| Task 8: Verification | general-purpose | Opus 4.6 | Must reason about build failures and fix them |
+| Task 9: Documentation | general-purpose | Sonnet 4.6 | Documentation updates |
+
+### Dependency Graph
+
+```
+Task 1 (Research)
+├── Task 2 (Dataset)      ← needs research findings
+├── Task 3 (Pipeline)     ← needs research findings
+├── Task 4 (Prompts)      ← needs research findings (parallel with 3)
+└── Task 6 (Detection)    ← needs research findings
+
+Task 3 + Task 4 → Task 5 (UI Panel)  ← needs pipeline + prompts
+Task 5 + Task 6 → Task 7 (Integration) ← needs all components
+Task 7 → Task 8 (Verification)
+Task 8 → Task 9 (Documentation)
+```
+
+**Max parallelism:** After Task 1 completes, Tasks 2, 3, 4, and 6 can all run in parallel. Tasks 5 waits for 3+4. Task 7 waits for 5+6.
+
+### AI Canvas Reference Files
+
+```
+AI_CANVAS_Example/AI-Canvas/
+├── data/humanizer008.json                    # Few-shot dataset (8th curation)
+├── api/humanizer/gemini001.php               # Few-shot pipeline implementation
+├── api/pangram.php                           # AI detection API proxy
+├── prompts/humanize/humanize.txt             # Batch humanization prompt
+├── prompts/humanize/humanize-one.txt         # Incremental "one more" prompt
+├── prompts/humanize/humanize-no-context.txt  # Standalone (no document context)
+├── js/modules/ui/HumanizerMenu.js            # Humanizer alternatives UI
+├── js/modules/ui/AIDetectorPanel.js          # Detection score + chunk cards
+├── css/modules/ai-detector.css               # Score badge, scan animation
+└── js/modules/ui/InlineSuggestions.js         # Temperature ramping pattern
+```
+
+Deploy all agents. Dependency-ordered task graph. Maximum parallel execution. Each agent reports completion to orchestrator. Orchestrator verifies at the end.
+
+Let's build Phase 2.
+
+### PROMPT END

@@ -71,8 +71,20 @@ Storage keys: `scribex:editor` and `scribex:dashboard` (defined in `src/lib/stor
 
 - **`ghost-text.ts`** — ProseMirror plugin for FIM autocomplete. Debounces 300ms, renders `.ghost-text` decoration at cursor. Tab accepts, Escape dismisses. Uses `AbortController` for in-flight cancellation.
 - **`mermaid-block.tsx`** — Atom node with React NodeView. Edit/render toggle, dynamic `import("mermaid")`, `securityLevel: "strict"`.
+- **`floating-menu-plugin.ts`** — ProseMirror plugin for text selection detection. 300ms debounce, viewport edge flip, dismiss on Escape/mousedown-outside. Exports `FloatingMenuPlugin`, `floatingMenuPluginKey`, `getFloatingMenuState()`, `FloatingMenuPluginState` interface.
 
 **Critical: Math delimiter convention** — `@tiptap/extension-mathematics` uses non-standard delimiters: `$$...$$` for inline, `$$$...$$$` for block (NOT standard LaTeX `$`/`$$`). For programmatic insertion use `insertInlineMath({ latex })` / `insertBlockMath({ latex })` commands — never `insertContent('$...$')` (input rules only fire on keystrokes). The `markdown-to-html.ts` utility preserves these conventions when converting Mercury API output.
+
+### Floating Menu System (`src/components/editor/`)
+
+Selection-triggered AI actions with two tiers (Phase 1):
+
+- **`floating-menu.tsx`** — 4-button fan-out (Rewrite, Simplify, Academic, Expand) from a sparkle trigger icon. Framer Motion spring animations, self-contained viewport positioning. Reads selection state from `floating-menu-plugin.ts`.
+- **`floating-ribbon.tsx`** — Tier-2 expansion panel with 4 modes (rewrite, stylize, humanize, detect). Style chips, alternative generators, AI detection placeholder. AI handler stubs ready for Phase 2 wiring.
+- **`change-diff-card.tsx`** — Visual diff card with red strikethrough (old) / green (new), Apply/Decline buttons. Apply uses ProseMirror `doc.descendants()` to find exact text position, then `deleteRange().insertContentAt()`.
+
+Supporting utilities:
+- **`src/lib/utils/change-block-parser.ts`** — Regex parser for `` ```change `` blocks in AI chat responses. Exports `parseChangeBlocks()`, `hasChangeBlocks()`, `ChangeBlock` type. Used by `ai-panel.tsx` to conditionally render `ChangeDiffCard` components when `!message.isStreaming`.
 
 ### Export System (`src/lib/export/`)
 
@@ -115,7 +127,7 @@ NEXT_PUBLIC_JOIN_CODE      # Access gate code (if empty, gate is bypassed)
 
 ## Known Build Issues
 
-- `/_global-error` fails to prerender — Next.js 16.1.6 Turbopack regression where `OuterLayoutRouter` calls `useContext(LayoutRouterContext)` = null during static generation. Cannot fix without patching Next.js. Dev server works fine.
+- `/_global-error` fails to prerender — Next.js 16.1.6 Turbopack regression where `OuterLayoutRouter` calls `useContext(LayoutRouterContext)` = null during static generation. Build fails with `useContext(LayoutRouterContext) = null` if `NODE_ENV=development` is set in shell. Fix: run `NODE_ENV=production pnpm build`. With correct NODE_ENV, build succeeds fully (only `/_global-error` fails, which is the unfixable Next.js regression). Dev server works fine regardless.
 - `ToasterProvider` uses `useSyncExternalStore(subscribe, () => true, () => false)` pattern to avoid sonner 2.x incompatibility with Next.js 16 static generation.
 
 ## Path Aliases
