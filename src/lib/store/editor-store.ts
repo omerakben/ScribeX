@@ -66,7 +66,7 @@ interface EditorState {
   toggleAIPanel: () => void;
   setAIPanelMode: (mode: AIPanelMode) => void;
   addAIMessage: (message: AIMessage) => void;
-  updateLastAIMessage: (content: string) => void;
+  updateLastAIMessage: (content: string, isStreaming?: boolean) => void;
   clearAIMessages: () => void;
   setIsAIStreaming: (streaming: boolean) => void;
   setActiveWritingMode: (mode: WritingMode | null) => void;
@@ -136,11 +136,13 @@ export const useEditorStore = create<EditorState>()(
       toggleAIPanel: () => set((s) => ({ aiPanelOpen: !s.aiPanelOpen })),
       setAIPanelMode: (aiPanelMode) => set({ aiPanelMode }),
       addAIMessage: (message) => set((s) => ({ aiMessages: [...s.aiMessages, message] })),
-      updateLastAIMessage: (content) =>
+      updateLastAIMessage: (content, isStreaming) =>
         set((s) => {
           const msgs = [...s.aiMessages];
           if (msgs.length > 0) {
-            msgs[msgs.length - 1] = { ...msgs[msgs.length - 1], content };
+            const updates: Partial<AIMessage> = { content };
+            if (isStreaming !== undefined) updates.isStreaming = isStreaming;
+            msgs[msgs.length - 1] = { ...msgs[msgs.length - 1], ...updates };
           }
           return { aiMessages: msgs };
         }),

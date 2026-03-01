@@ -31,6 +31,7 @@ import { GhostText } from "@/lib/extensions/ghost-text";
 import { MermaidBlock } from "@/lib/extensions/mermaid-block";
 import { useEditorStore } from "@/lib/store/editor-store";
 import { DiffusionOverlay } from "@/components/editor/diffusion-overlay";
+import { FloatingMenu } from "@/components/editor/floating-menu";
 import { SlashCommandMenu } from "@/components/editor/slash-command-menu";
 import type { SlashCommand } from "@/lib/types";
 import type { Editor } from "@tiptap/react";
@@ -235,6 +236,7 @@ export function EditorCanvas({ onEditorReady }: EditorCanvasProps) {
                   updateLastAIMessage(accumulated);
                 },
                 onDone: () => {
+                  updateLastAIMessage(accumulated, false);
                   setIsAIStreaming(false);
                   setActiveWritingMode(null);
                   if (accumulated.trim()) {
@@ -242,6 +244,7 @@ export function EditorCanvas({ onEditorReady }: EditorCanvasProps) {
                   }
                 },
                 onError: () => {
+                  updateLastAIMessage(accumulated, false);
                   setIsAIStreaming(false);
                   setActiveWritingMode(null);
                 },
@@ -341,6 +344,7 @@ export function EditorCanvas({ onEditorReady }: EditorCanvasProps) {
                 updateLastAIMessage(rwAccumulated);
               },
               onDone: () => {
+                updateLastAIMessage(rwAccumulated, false);
                 setIsAIStreaming(false);
                 setActiveWritingMode(null);
                 if (rwAccumulated.trim() && rwRange) {
@@ -348,6 +352,7 @@ export function EditorCanvas({ onEditorReady }: EditorCanvasProps) {
                 }
               },
               onError: () => {
+                updateLastAIMessage(rwAccumulated, false);
                 setIsAIStreaming(false);
                 setActiveWritingMode(null);
               },
@@ -402,6 +407,7 @@ export function EditorCanvas({ onEditorReady }: EditorCanvasProps) {
         >
           <EditorContent editor={editor} className="tiptap-wrapper" />
           <SlashCommandMenu editor={editor} onCommand={handleSlashCommand} />
+          <FloatingMenu editor={editor} />
           <DiffusionOverlay />
         </div>
       </div>

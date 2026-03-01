@@ -14,7 +14,9 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { markdownToHtml } from "@/lib/utils/markdown-to-html";
+import { parseChangeBlocks, hasChangeBlocks } from "@/lib/utils/change-block-parser";
 import { streamChatCompletion, structuredChatCompletion } from "@/lib/mercury/client";
+import { ChangeDiffCard } from "@/components/editor/change-diff-card";
 import { CHAT_SYSTEM_PROMPT } from "@/lib/prompts/assistant/chat";
 import { useEditorStore } from "@/lib/store/editor-store";
 import {
@@ -150,10 +152,11 @@ function ChatTab({ editor }: { editor: Editor | null }) {
         updateLastAIMessage(accumulated);
       },
       onDone: () => {
+        updateLastAIMessage(accumulated, false);
         setIsAIStreaming(false);
       },
       onError: (error) => {
-        updateLastAIMessage(accumulated || `Error: ${error.message}`);
+        updateLastAIMessage(accumulated || `Error: ${error.message}`, false);
         setIsAIStreaming(false);
       },
       signal: controller.signal,
@@ -191,21 +194,51 @@ function ChatTab({ editor }: { editor: Editor | null }) {
               )}
             >
               <div className="flex flex-col max-w-[85%]">
-                <div
-                  className={cn(
-                    "whitespace-pre-wrap text-sm",
-                    message.role === "user"
-                      ? "bg-brand-600 text-white rounded-2xl rounded-br-md px-4 py-2.5"
-                      : "bg-ink-50 text-ink-700 rounded-2xl rounded-bl-md px-4 py-2.5 leading-relaxed"
-                  )}
-                >
-                  {message.content || (
-                    <span className="inline-flex items-center gap-1.5 text-ink-400">
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                      Thinking
-                    </span>
-                  )}
-                </div>
+                {message.role === "assistant" &&
+                message.content &&
+                !message.isStreaming &&
+                hasChangeBlocks(message.content) ? (
+                  <div className="space-y-2">
+                    {parseChangeBlocks(message.content).map((block, blockIndex) => {
+                      if (block.type === "text" && block.content.trim()) {
+                        return (
+                          <div
+                            key={`text-${blockIndex}`}
+                            className="whitespace-pre-wrap text-sm bg-ink-50 text-ink-700 rounded-2xl rounded-bl-md px-4 py-2.5 leading-relaxed"
+                          >
+                            {block.content.trim()}
+                          </div>
+                        );
+                      }
+                      if (block.type === "change") {
+                        return (
+                          <ChangeDiffCard
+                            key={`change-${blockIndex}`}
+                            change={block}
+                            editor={editor}
+                          />
+                        );
+                      }
+                      return null;
+                    })}
+                  </div>
+                ) : (
+                  <div
+                    className={cn(
+                      "whitespace-pre-wrap text-sm",
+                      message.role === "user"
+                        ? "bg-brand-600 text-white rounded-2xl rounded-br-md px-4 py-2.5"
+                        : "bg-ink-50 text-ink-700 rounded-2xl rounded-bl-md px-4 py-2.5 leading-relaxed"
+                    )}
+                  >
+                    {message.content || (
+                      <span className="inline-flex items-center gap-1.5 text-ink-400">
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        Thinking
+                      </span>
+                    )}
+                  </div>
+                )}
 
                 {/* Action buttons for completed assistant messages */}
                 {message.role === "assistant" && message.content && !message.isStreaming && (
