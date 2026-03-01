@@ -22,18 +22,23 @@
 
 ---
 
-ScribeX combines a manuscript editor, writing-mode automation, citation search, multi-format export, and structured review workflows into one focused tool for researchers who need to move from rough draft to submission-ready writing with less friction.
+ScribeX combines a manuscript editor, writing-mode automation, citation search, multi-format export, humanizer pipeline, AI detection, and structured review workflows into one focused tool for researchers who need to move from rough draft to submission-ready writing with less friction.
 
 ## Why This Tool Exists
 
 Academic writing is usually split across multiple tools — one for drafting, another for references, another for revision, and yet another for AI prompting. ScribeX pulls those loops into a single interface:
 
 - **Draft and revise** inside a TipTap editor with slash-command AI actions
-- **13 writing commands** — generate, expand, simplify, academic tone, outline, counter-argument, evidence, transitions, abstract, rewrite, diffusion draft, mermaid diagrams, and more
+- **15 writing commands** — generate, expand, simplify, academic tone, outline, counter-argument, evidence, transitions, abstract, rewrite, diffusion draft, mermaid diagrams, summarize, continue, and more
+- **Floating AI actions** on text selection — 10 quick actions + 7-mode ribbon panel for rewrite, stylize, fix, custom, tone, humanize, and detect
+- **Writing tools suite** — synonyms (5 variants), stylize (8 styles), fix (copy editor), custom instructions, tone analysis
+- **Humanize AI text** with few-shot learning pipeline (456-entry dataset, 3-tier UX)
+- **AI detection** with sentence-level scoring and color-coded breakdown
 - **Citation search** via Semantic Scholar with 6 citation style formats (APA-7, MLA-9, Chicago-17, IEEE, Harvard, Vancouver)
 - **Structured manuscript review** with scored category feedback via JSON schema output
 - **Export to 6 formats** — PDF, Word (DOCX), Markdown, HTML, BibTeX, and LaTeX
-- **Local-first persistence** with autosave, Cmd/Ctrl+S manual save, and localStorage hydration
+- **Dark mode** with full oklch color scale inversion across all 3 design scales
+- **Local-first persistence** with content-hash autosave, per-paper chat, auto-naming, and localStorage hydration
 - **Diffusion drafting** — visualize Mercury's parallel denoising process as your draft takes shape
 
 ## Screenshots
@@ -92,12 +97,16 @@ Open [http://localhost:3000](http://localhost:3000).
 ## Architecture
 
 ```
-User ─→ EditorCanvas / AIPanel
+User ─→ EditorCanvas / AIPanel / FloatingMenu
               │
               ├─→ Mercury Client (src/lib/mercury/client.ts)
               │         │
               │         └─→ POST /api/mercury ──→ Inception Labs API
               │              (chat / apply / fim / edit)
+              │
+              ├─→ POST /api/humanize ──→ Mercury-2 (few-shot humanization)
+              │
+              ├─→ POST /api/detect ──→ Heuristic AI detection
               │
               ├─→ GET /api/citations ──→ Semantic Scholar API
               │
@@ -108,6 +117,7 @@ User ─→ EditorCanvas / AIPanel
 - **Browser never calls Inception directly** — all AI requests proxy through `/api/mercury` which attaches the server-side `INCEPTION_API_KEY`
 - **Middleware** (`src/middleware.ts`) applies CSRF protection and rate limiting (60 req/min per IP) to all `/api/*` routes
 - **Mercury Client** routes writing modes to the correct model: `mercury-2` for generative work, `mercury-edit` for autocomplete/FIM and short edits
+- **Temperature engineering** — 22-action temperature map across 5 tiers (0.0 deterministic to 0.9 high creativity) with dynamic token caps based on input length
 
 ## Feature Status
 
@@ -116,11 +126,24 @@ User ─→ EditorCanvas / AIPanel
 | Mercury streaming + reasoning controls              | Done   |
 | Diffusion drafting with denoising overlay           | Done   |
 | Quick edit / deep rewrite modes                     | Done   |
-| FIM autocomplete ghost text (Tab to accept)         | Done   |
+| FIM ghost text with word-by-word acceptance         | Done   |
+| Multi-alternative ghost text (5 cached, Arrow cycle)| Done   |
 | Structured manuscript review (JSON schema)          | Done   |
 | Citation search + style-aware insertion             | Done   |
-| 13 slash commands with model routing                | Done   |
+| 15 slash commands with model routing                | Done   |
 | 7 paper templates (IMRAD, lit review, thesis, etc.) | Done   |
+| Floating menu (10 AI actions) + ribbon panel        | Done   |
+| Writing tools: synonyms, stylize, fix, custom, tone | Done   |
+| Humanizer pipeline (few-shot, 456-entry dataset)    | Done   |
+| AI detection with sentence-level breakdown          | Done   |
+| Change block parser + diff cards in AI chat         | Done   |
+| Document stats + readability badge (Flesch score)   | Done   |
+| Content-hash autosave + auto-naming                 | Done   |
+| Per-paper chat histories + prompt history (50)      | Done   |
+| Dark mode (full oklch color scale inversion)        | Done   |
+| Keyboard shortcuts (5 AI bindings)                  | Done   |
+| Temperature engineering (22-action map, 5 tiers)    | Done   |
+| HTML sanitization pipeline (5-stage)                | Done   |
 | Local persistence + autosave                        | Done   |
 | Export: PDF, DOCX, Markdown, HTML, BibTeX, LaTeX    | Done   |
 | Math (KaTeX) + Mermaid diagram support              | Done   |
@@ -133,6 +156,7 @@ User ─→ EditorCanvas / AIPanel
 
 - Persistence is browser localStorage only — no server-backed database
 - Access gating uses a client-side join code, not full authentication
+- AI detection uses heuristic analysis — production swap to Pangram/GPTZero planned
 - Plan/usage tier constants exist in code but are not enforced server-side
 - Rate limiting is in-memory (not suitable for multi-region deployment without Redis)
 
@@ -194,6 +218,42 @@ const suggestion = await fimCompletion(
 );
 ```
 
+### Humanize AI-generated text
+
+```ts
+import { humanizeText } from "@/lib/mercury/client";
+
+const { alternatives } = await humanizeText(
+  "AI-generated text here",
+  { count: 4 }
+);
+```
+
+### Detect AI-written content
+
+```ts
+import { detectAI } from "@/lib/detection/client";
+
+const { score, label, sentences } = await detectAI(
+  "Text to analyze for AI patterns."
+);
+// label: "human" | "mixed" | "ai"
+// sentences: per-sentence scores with color thresholds
+```
+
+## Keyboard Shortcuts
+
+| Shortcut | Action |
+| -------- | ------ |
+| `Cmd/Ctrl+Shift+R` | Rewrite selection |
+| `Cmd/Ctrl+Shift+H` | Humanize selection |
+| `Cmd/Ctrl+Shift+F` | Fix grammar |
+| `Cmd/Ctrl+Shift+Y` | Stylize selection |
+| `Cmd/Ctrl+Shift+D` | Detect AI |
+| `Tab` | Accept next ghost text word |
+| `Cmd/Ctrl+Enter` | Accept all ghost text |
+| `Arrow Up/Down` | Cycle ghost text alternatives |
+
 ## API Routes
 
 ### `POST /api/mercury`
@@ -209,6 +269,33 @@ Server-side proxy to Inception API (`https://api.inceptionlabs.ai/v1`). API keys
 ```
 
 Endpoint mapping: `chat` → `/chat/completions`, `apply` → `/apply/completions`, `fim` → `/fim/completions`, `edit` → `/edit/completions`
+
+### `POST /api/humanize`
+
+Few-shot humanization pipeline. Assembles examples from a 456-entry dataset server-side, calls Mercury-2.
+
+```json
+{
+  "text": "AI-generated text to humanize",
+  "context": "optional surrounding context",
+  "count": 4,
+  "action": "generate | generate_one",
+  "existing": ["previously generated alternatives for dedup"],
+  "temperature": 0.9
+}
+```
+
+Returns `{ alternatives: string[] }` for `generate` or `{ alternative: string }` for `generate_one`.
+
+### `POST /api/detect`
+
+Heuristic AI detection with per-sentence scoring.
+
+```json
+{ "text": "Text to analyze (10 chars min, 20K max)" }
+```
+
+Returns `{ score: number, label: "human" | "mixed" | "ai", sentences: [{ text, score }] }`.
 
 ### `GET /api/citations`
 
@@ -259,25 +346,38 @@ src/
 ├── app/                    # Next.js App Router
 │   ├── api/mercury/        # Mercury API proxy route
 │   ├── api/citations/      # Semantic Scholar proxy route
+│   ├── api/humanize/       # Humanizer pipeline route
+│   ├── api/detect/         # AI detection route
 │   ├── dashboard/          # Paper management pages
 │   └── editor/[id]/        # Editor (dynamic route)
 ├── components/
-│   ├── editor/             # TipTap editor, AI panel, toolbar, slash menu
+│   ├── editor/             # TipTap editor, AI panel, toolbar, slash menu,
+│   │                       #   floating-menu, floating-ribbon, change-diff-card,
+│   │                       #   dark-mode-toggle, document-stats, readability-badge,
+│   │                       #   tone-analysis-card, humanizer-panel, ai-detection-badge
 │   ├── dashboard/          # Sidebar, paper cards, new-paper dialog
 │   ├── export/             # Export format dialog
 │   ├── landing/            # Marketing page sections
-│   ├── shared/             # JoinGate, ToasterProvider
+│   ├── shared/             # JoinGate, ToasterProvider, DarkModeProvider
 │   └── ui/                 # shadcn/ui primitives (barrel export)
+├── data/                   # humanizer-dataset.json (456 entries, server-only)
 ├── hooks/                  # useHydration
 ├── lib/
-│   ├── constants/          # System prompts, commands, templates, styles
+│   ├── constants/          # System prompts, commands, templates, temperatures (22-action map)
+│   ├── detection/          # AI detection: heuristics, client
 │   ├── export/             # 6 format handlers + sanitizer + utils
-│   ├── extensions/         # Custom TipTap: ghost-text, mermaid-block
+│   ├── extensions/         # ghost-text (multi-alt), mermaid-block,
+│   │                       #   floating-menu-plugin, keyboard-shortcuts
+│   ├── humanizer/          # Dataset loader, pipeline, types
 │   ├── mercury/            # Mercury API client wrapper
+│   ├── prompts/            # 37 prompt files: commands/, synonyms/, stylize/,
+│   │                       #   fix/, custom/, humanize/, assistant/, document/, system/
 │   ├── storage/            # localStorage helpers (SSR-safe)
 │   ├── store/              # Zustand stores (editor + dashboard)
 │   ├── types/              # TypeScript types
-│   └── utils/              # cn(), markdown-to-html
+│   └── utils/              # cn, markdown-to-html, change-block-parser,
+│                           #   readability, content-hash, sanitize-html,
+│                           #   selection-markers, context-window
 ├── middleware.ts            # CSRF + rate limiting for /api/*
 └── types/                  # Module declarations (html2pdf.js)
 ```

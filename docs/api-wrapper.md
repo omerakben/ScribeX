@@ -1,6 +1,6 @@
 # Mercury API Wrapper Reference
 
-Last verified: **February 27, 2026**.
+Last verified: **March 1, 2026**.
 
 This document explains the ScribeX Mercury wrapper layer implemented in `src/lib/mercury/client.ts` and how it maps to `src/app/api/mercury/route.ts`.
 
@@ -14,6 +14,8 @@ Wrapper responsibilities:
 - Provide stream callbacks for UI updates
 - Inject academic system prompt for chat flows
 - Support reasoning-effort and diffusion options
+- Dynamic token cap calculation based on input length
+- Thin client methods for humanizer and detection endpoints
 
 Route responsibilities:
 
@@ -37,7 +39,20 @@ Middleware responsibilities (`src/middleware.ts`):
 
 Base URL: `https://api.inceptionlabs.ai/v1`
 
-## 3. Wrapper Functions
+## 3. Additional API Routes
+
+### `POST /api/humanize`
+
+Server-side humanizer pipeline. Assembles few-shot examples from the 456-entry dataset, selects a context-aware or no-context prompt, and calls Mercury-2.
+
+- `action: "generate"` — Batch generation. Returns `{ alternatives: string[] }` (default: 4 alternatives).
+- `action: "generate_one"` — Incremental generation with dedup. Accepts `existing` array. Temperature ramps +0.15 per existing variant (capped at 1.5). Returns `{ alternative: string }`.
+
+### `POST /api/detect`
+
+AI detection endpoint. Accepts `{ text }` (10-char min, 20K-char max). Returns `{ score, label: "human"|"mixed"|"ai", sentences: [{ text, score }] }`. Currently uses heuristic analysis (type-token ratio, passive voice, transition density, burstiness).
+
+## 4. Wrapper Functions
 
 ### `routeToModel(mode, editScope?)`
 
@@ -47,6 +62,15 @@ Selects model based on writing mode.
 - Returns `"mercury-edit"` for autocomplete/next-edit and short quick edits
 - Quick-edit fallback: `editScope < 500` → `mercury-edit`, else `mercury-2`
 
+### `calculateMaxTokens(inputText, defaultMax?)`
+
+Dynamic token cap based on input length. Prevents wasted tokens on short inputs.
+
+- Input under 50 words: returns `Math.max(wordCount * 10, 256)` (minimum 256)
+- Input 50 words or more: returns `defaultMax` (default: 4096)
+
+Used by `streamChatCompletion` and slash command handlers in `editor-canvas.tsx`.
+
 ### `streamChatCompletion(messages, options)`
 
 Purpose: streaming chat generation via `/api/mercury` with SSE handling.
@@ -54,7 +78,7 @@ Purpose: streaming chat generation via `/api/mercury` with SSE handling.
 Important behaviors:
 
 - Prepends `ACADEMIC_SYSTEM_PROMPT` to input messages
-- Defaults: `max_tokens=4096`, `temperature=0.3`, `stream=true`
+- Defaults: `max_tokens=4096`, `temperature` from `getTemperature("chat")`, `stream=true`
 - Optional `reasoning_effort`
 - Optional `diffusing` mode
 - Invokes:
@@ -145,6 +169,8 @@ Request packaging format:
 <|/update_snippet|>
 ```
 
+Response handling: the wrapper auto-strips `<|updated_code|>` / `</|updated_code|>` delimiters from the response before returning clean edited text.
+
 Defaults used by wrapper:
 
 - `max_tokens: 8192`
@@ -171,6 +197,8 @@ Defaults used by wrapper:
 - `temperature: 0.0`
 - `presence_penalty: 1.5`
 
+Accepts optional `temperature` parameter for alternative cycling. Ghost text uses ramped temperatures (0.0, 0.1, 0.2, 0.3, 0.4) when fetching additional alternatives for the same cursor position.
+
 Example:
 
 ```ts
@@ -180,9 +208,58 @@ const completion = await fimCompletion(
   "Our findings indicate that",
   "under constrained token budgets."
 );
+
+// With temperature for alternative generation
+const alt = await fimCompletion(
+  "Our findings indicate that",
+  "under constrained token budgets.",
+  { temperature: 0.2 }
+);
 ```
 
-## 4. Request Body Shapes (As Used In ScribeX)
+### `humanizeText(text, options?)`
+
+Purpose: batch generation of humanized text alternatives via `POST /api/humanize`.
+
+Routes to the humanize API with `action: "generate"`. Server-side pipeline assembles 5 few-shot examples from the 456-entry dataset and calls Mercury-2 with the humanize prompt.
+
+Returns `{ alternatives: string[] }` (default: 4 alternatives).
+
+Example:
+
+```ts
+import { humanizeText } from "@/lib/mercury/client";
+
+const result = await humanizeText(
+  "The implementation demonstrates significant improvements in performance metrics.",
+  { context: "Results section of a computer science paper" }
+);
+
+console.log(result.alternatives); // 4 humanized versions
+```
+
+### `humanizeOneMore(text, existing, options?)`
+
+Purpose: incremental generation of a single humanized alternative with dedup via `POST /api/humanize`.
+
+Routes to the humanize API with `action: "generate_one"`. Passes the `existing` alternatives array so the server can deduplicate. Temperature ramps +0.15 per existing variant (capped at 1.5).
+
+Returns `{ alternative: string }`.
+
+Example:
+
+```ts
+import { humanizeOneMore } from "@/lib/mercury/client";
+
+const result = await humanizeOneMore(
+  "The implementation demonstrates significant improvements.",
+  ["The results show clear performance gains.", "We observed notable improvements."]
+);
+
+console.log(result.alternative); // 1 new humanized version, deduplicated
+```
+
+## 5. Request Body Shapes (As Used In ScribeX)
 
 Chat payload example:
 
@@ -192,7 +269,7 @@ Chat payload example:
   "model": "mercury-2",
   "messages": [{ "role": "system", "content": "..." }, { "role": "user", "content": "..." }],
   "max_tokens": 4096,
-  "temperature": 0.3,
+  "temperature": 0.6,
   "stream": true,
   "diffusing": false,
   "reasoning_effort": "medium"
@@ -225,14 +302,58 @@ FIM payload example:
 }
 ```
 
-## 5. Error Handling Behavior
+Humanize payload example (batch):
+
+```json
+{
+  "text": "The implementation demonstrates significant improvements.",
+  "context": "Results section",
+  "count": 4,
+  "action": "generate"
+}
+```
+
+Humanize payload example (incremental):
+
+```json
+{
+  "text": "The implementation demonstrates significant improvements.",
+  "existing": ["The results show clear performance gains."],
+  "action": "generate_one",
+  "temperature": 1.05
+}
+```
+
+Detect payload example:
+
+```json
+{
+  "text": "The implementation demonstrates significant improvements in performance metrics across all evaluated benchmarks."
+}
+```
+
+Detect response example:
+
+```json
+{
+  "score": 0.72,
+  "label": "ai",
+  "sentences": [
+    { "text": "The implementation demonstrates significant improvements in performance metrics across all evaluated benchmarks.", "score": 0.72 }
+  ]
+}
+```
+
+## 6. Error Handling Behavior
 
 - Wrapper throws if response status is not OK.
 - Streaming parser ignores malformed `data:` chunks and continues.
 - `AbortError` in streaming is treated as non-fatal cancellation.
 - Route returns upstream status + error text when provider request fails.
+- Humanize endpoint returns 400 for empty text, 500 for pipeline failures.
+- Detect endpoint returns 400 for text under 10 chars or over 20K chars.
 
-## 6. Model Context And Attribution
+## 7. Model Context And Attribution
 
 ScribeX wraps Inception's Mercury platform endpoints and model controls.
 
