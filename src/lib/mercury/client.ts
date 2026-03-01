@@ -1,5 +1,12 @@
 import { getSystemPrompt } from "@/lib/prompts";
-import type { MercuryModel, MercuryMessage, ReasoningEffort, WritingMode } from "@/lib/types";
+import type {
+  MercuryModel,
+  MercuryMessage,
+  ReasoningEffort,
+  WritingMode,
+  HumanizerResponse,
+  HumanizerOneResponse,
+} from "@/lib/types";
 
 function getJoinToken(): string {
   const envCode = process.env.NEXT_PUBLIC_JOIN_CODE ?? "";
@@ -227,4 +234,69 @@ export async function fimCompletion(
 
   const data = await res.json();
   return data.choices?.[0]?.text ?? "";
+}
+
+// ─── Humanizer Client ──────────────────────────────────────────
+
+/**
+ * Generate humanized alternatives for AI-generated text.
+ * Calls /api/humanize which assembles few-shot examples server-side.
+ */
+export async function humanizeText(
+  text: string,
+  options?: {
+    context?: string;
+    count?: number;
+    temperature?: number;
+    signal?: AbortSignal;
+  }
+): Promise<HumanizerResponse> {
+  const res = await fetch("/api/humanize", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "x-join-token": getJoinToken() },
+    body: JSON.stringify({
+      text,
+      context: options?.context,
+      count: options?.count ?? 4,
+      action: "generate",
+      temperature: options?.temperature,
+    }),
+    signal: options?.signal,
+  });
+
+  if (!res.ok) {
+    throw new Error(`Humanize API error: ${res.status} ${res.statusText}`);
+  }
+
+  return res.json();
+}
+
+/**
+ * Generate one more humanized alternative, avoiding duplicates.
+ */
+export async function humanizeOneMore(
+  text: string,
+  existing: string[],
+  options?: {
+    temperature?: number;
+    signal?: AbortSignal;
+  }
+): Promise<HumanizerOneResponse> {
+  const res = await fetch("/api/humanize", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "x-join-token": getJoinToken() },
+    body: JSON.stringify({
+      text,
+      existing,
+      action: "generate_one",
+      temperature: options?.temperature,
+    }),
+    signal: options?.signal,
+  });
+
+  if (!res.ok) {
+    throw new Error(`Humanize API error: ${res.status} ${res.statusText}`);
+  }
+
+  return res.json();
 }

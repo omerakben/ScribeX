@@ -26,6 +26,11 @@ export { PROMPT_VERSIONS } from "./_version";
 export { ACADEMIC_SYSTEM_PROMPT } from "./system/academic";
 export { CHAT_SYSTEM_PROMPT } from "./assistant/chat";
 
+// Humanizer prompts (used server-side by /api/humanize)
+export { HUMANIZE_PROMPT } from "./humanize/humanize";
+export { HUMANIZE_NO_CONTEXT_PROMPT } from "./humanize/humanize-no-context";
+export { HUMANIZE_ONE_PROMPT } from "./humanize/humanize-one";
+
 import {
   interpolate,
   getRawSystemPrompt,

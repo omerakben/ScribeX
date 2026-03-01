@@ -18,4 +18,7 @@ export const PROMPT_VERSIONS: Record<string, string> = {
   "commands/rewrite": "1.0.0",
   "commands/diffuse": "1.0.0",
   "commands/mermaid": "1.0.0",
+  "humanize/humanize": "1.0.0",
+  "humanize/humanize-no-context": "1.0.0",
+  "humanize/humanize-one": "1.0.0",
 };

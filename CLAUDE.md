@@ -41,6 +41,8 @@ Test helpers (`e2e/helpers.ts`): `seedJoinToken()` and `seedPaper()` use `page.a
 
 - `POST /api/mercury` — Proxy to Inception Labs Mercury API. Accepts `{ endpoint, ...payload }` where endpoint is `chat|apply|fim|edit`. Handles both streaming (SSE passthrough) and non-streaming responses.
 - `GET /api/citations?q=&limit=&offset=` — Proxy to Semantic Scholar `/graph/v1/paper/search`. Transforms response to internal `Citation` format.
+- `POST /api/humanize` — Humanizer pipeline. Accepts `{ text, context?, count?, existing?, action: 'generate'|'generate_one', temperature? }`. Assembles few-shot messages from dataset server-side, calls Mercury-2. Returns `{alternatives: string[]}` or `{alternative: string}`.
+- `POST /api/detect` — AI detection. Accepts `{ text }`. Returns `{score, label: 'human'|'mixed'|'ai', sentences: [{text, score}]}`. Currently uses heuristic analysis (TODO: swap for Pangram/GPTZero).
 
 ### Middleware (`src/middleware.ts`)
 
@@ -56,6 +58,8 @@ All AI features route through this client → `/api/mercury` (never external API
 - `applyEdit()` — Non-streaming edit via `<|original_code|>` / `<|update_snippet|>` delimiters (mercury-edit).
 - `fimCompletion()` — Fill-in-the-middle for autocomplete (mercury-edit).
 - `routeToModel()` — Maps `WritingMode` → `MercuryModel`. `quick-edit` routes to mercury-edit for short selections (<500 chars), mercury-2 otherwise.
+- `humanizeText()` — Thin client for `/api/humanize` (batch generation). Returns `HumanizerResponse`.
+- `humanizeOneMore()` — Thin client for `/api/humanize` (incremental generation with dedup). Returns `HumanizerOneResponse`.
 
 ### State Management
 
@@ -80,11 +84,24 @@ Storage keys: `scribex:editor` and `scribex:dashboard` (defined in `src/lib/stor
 Selection-triggered AI actions with two tiers (Phase 1):
 
 - **`floating-menu.tsx`** — 4-button fan-out (Rewrite, Simplify, Academic, Expand) from a sparkle trigger icon. Framer Motion spring animations, self-contained viewport positioning. Reads selection state from `floating-menu-plugin.ts`.
-- **`floating-ribbon.tsx`** — Tier-2 expansion panel with 4 modes (rewrite, stylize, humanize, detect). Style chips, alternative generators, AI detection placeholder. AI handler stubs ready for Phase 2 wiring.
+- **`floating-ribbon.tsx`** — Tier-2 expansion panel with 4 modes (rewrite, stylize, humanize, detect). Humanize mode renders `HumanizerPanel`, detect mode renders `AIDetectionBadge`.
 - **`change-diff-card.tsx`** — Visual diff card with red strikethrough (old) / green (new), Apply/Decline buttons. Apply uses ProseMirror `doc.descendants()` to find exact text position, then `deleteRange().insertContentAt()`.
 
 Supporting utilities:
 - **`src/lib/utils/change-block-parser.ts`** — Regex parser for `` ```change `` blocks in AI chat responses. Exports `parseChangeBlocks()`, `hasChangeBlocks()`, `ChangeBlock` type. Used by `ai-panel.tsx` to conditionally render `ChangeDiffCard` components when `!message.isStreaming`.
+
+### Humanizer System (`src/lib/humanizer/`, Phase 2)
+
+Few-shot learning pipeline that transforms AI-generated text into human-sounding prose:
+- **`dataset.ts`** — Loads 456-entry dataset from `src/data/humanizer-dataset.json` (server-side only). `sampleFewShot(n)` uses Fisher-Yates partial shuffle. `buildFewShotMessages()` converts pairs to Mercury chat format (user=AI text, assistant=human text).
+- **`pipeline.ts`** — `buildHumanizePayload()` for batch generation (5 few-shot examples, context-aware prompt selection), `buildHumanizeOnePayload()` for incremental generation with temperature ramp (+0.15 per existing, capped at 1.5). `parseAlternatives()` with 4-tier JSON extraction fallback.
+- **`humanizer-panel.tsx`** — Three-tier UX: Tier 1 generates 4 alternatives (skeleton loading → stagger animation), Tier 2 "Generate More" button adds incrementally, Tier 3 deduplication via existing alternatives array. Click card to apply to editor.
+
+### AI Detection System (`src/lib/detection/`, Phase 2)
+
+- **`heuristics.ts`** — Self-contained text analyzer: type-token ratio, passive voice frequency, transition word density, sentence-length burstiness. Per-sentence + weighted global scoring. TODO for real provider swap (Pangram/GPTZero).
+- **`client.ts`** — Thin `detectAI(text, signal?)` fetch wrapper for `/api/detect`.
+- **`ai-detection-badge.tsx`** — Self-contained badge component. States: idle/scanning/error/done. Color thresholds: <30% green/human, 30-60% amber/mixed, >60% red/ai. Expandable sentence-level breakdown.
 
 ### Export System (`src/lib/export/`)
 
@@ -110,7 +127,7 @@ UI in `src/components/export/export-dialog.tsx`. Custom type declaration for htm
 
 ### Key Types (`src/lib/types/index.ts`)
 
-Central type definitions: `Paper`, `WritingMode`, `MercuryModel`, `Citation`, `AIMessage`, `SlashCommand`, `DiffusionStep`, `UserProfile`. All Mercury request/response types live here. Export types in `src/lib/types/export.ts`.
+Central type definitions: `Paper`, `WritingMode`, `MercuryModel`, `Citation`, `AIMessage`, `SlashCommand`, `DiffusionStep`, `UserProfile`, `HumanizerRequest`, `HumanizerResponse`, `HumanizerOneResponse`, `DetectionRequest`, `DetectionResponse`, `DetectionSentence`. All Mercury request/response types live here. Export types in `src/lib/types/export.ts`.
 
 ### Constants (`src/lib/constants/index.ts`)
 

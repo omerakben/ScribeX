@@ -174,6 +174,52 @@ export interface DiffusionStep {
   confidence: number;
 }
 
+// ─── Humanizer Types ──────────────────────────────────────────
+
+export interface HumanizerRequest {
+  text: string;
+  context?: string;
+  count?: number;
+  existing?: string[];
+  action: "generate" | "generate_one";
+  temperature?: number;
+}
+
+export interface HumanizerResponse {
+  alternatives: string[];
+}
+
+export interface HumanizerOneResponse {
+  alternative: string;
+}
+
+export interface HumanizerAlternative {
+  text: string;
+  selected: boolean;
+}
+
+export interface HumanizerDatasetEntry {
+  use: string;
+  text: string;
+}
+
+// ─── AI Detection Types ────────────────────────────────────────
+
+export interface DetectionRequest {
+  text: string;
+}
+
+export interface DetectionSentence {
+  text: string;
+  score: number; // 0–1, probability of AI authorship
+}
+
+export interface DetectionResponse {
+  score: number; // 0–1, overall AI probability
+  label: "human" | "mixed" | "ai";
+  sentences: DetectionSentence[];
+}
+
 // ─── User & Session Types ──────────────────────────────────────
 
 export type PlanTier = "scholar" | "researcher" | "lab" | "institution";

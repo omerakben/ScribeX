@@ -1,9 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { motion } from "framer-motion";
 import { RefreshCw, Palette, Wand2, Search, X, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
+import { AIDetectionBadge } from "@/components/editor/ai-detection-badge";
+import { HumanizerPanel } from "@/components/editor/humanizer-panel";
 import type { Editor } from "@tiptap/react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -262,126 +264,23 @@ function StylizeContent({
   );
 }
 
-interface HumanizeContentProps {
-  accentClasses: (typeof ACCENT_CLASSES)["brand" | "mercury"];
-  count: number;
-  isLoading: boolean;
-  onCountChange: (n: number) => void;
-  onGenerate: () => void;
-}
-
-function HumanizeContent({
-  accentClasses,
-  count,
-  isLoading,
-  onCountChange,
-  onGenerate,
-}: HumanizeContentProps) {
-  const OPTIONS = [1, 2, 3, 4] as const;
-
-  return (
-    <div className="space-y-3">
-      {/* Count selector */}
-      <div className="space-y-1.5">
-        <p className="text-[11px] font-semibold uppercase tracking-wide text-ink-400">
-          Number of alternatives
-        </p>
-        <div className="flex gap-2">
-          {OPTIONS.map((n) => {
-            const isSelected = count === n;
-            return (
-              <button
-                key={n}
-                type="button"
-                onClick={() => onCountChange(n)}
-                className={cn(
-                  "flex-1 py-2 rounded-lg text-sm font-semibold border",
-                  "transition-colors duration-150",
-                  "focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-brand-400",
-                  isSelected
-                    ? [
-                        accentClasses.chipActiveBg,
-                        accentClasses.chipActiveText,
-                        accentClasses.chipActiveBorder,
-                      ]
-                    : [
-                        "bg-ink-50 text-ink-600 border-ink-100",
-                        accentClasses.chipHoverBg,
-                        accentClasses.chipHoverText,
-                        accentClasses.chipHoverBorder,
-                      ]
-                )}
-              >
-                {n}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Generate button */}
-      <button
-        type="button"
-        disabled={isLoading}
-        onClick={onGenerate}
-        className={cn(
-          "w-full flex items-center justify-center gap-1.5 py-2 px-4 rounded-lg",
-          "text-xs font-semibold transition-colors duration-150",
-          "focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-1",
-          "disabled:opacity-50 disabled:cursor-not-allowed",
-          accentClasses.generateBtn
-        )}
-      >
-        {isLoading ? (
-          <>
-            <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            Generating…
-          </>
-        ) : (
-          <>
-            <Wand2 className="h-3.5 w-3.5" />
-            Generate
-          </>
-        )}
-      </button>
-    </div>
-  );
-}
-
 interface DetectContentProps {
-  accentClasses: (typeof ACCENT_CLASSES)["brand" | "mercury"];
+  selectedText: string;
 }
 
-function DetectContent({ accentClasses }: DetectContentProps) {
+function DetectContent({ selectedText }: DetectContentProps) {
   return (
     <div className="space-y-3">
-      {/* Score badge placeholder */}
-      <div className="flex items-center gap-3">
-        <div
-          className={cn(
-            "px-3 py-1.5 rounded-full text-xs font-semibold border",
-            accentClasses.scoreBg
-          )}
-        >
-          Score: —
-        </div>
-        <span className="text-xs text-ink-400">Not yet analyzed</span>
-      </div>
-
-      {/* Phase 2 notice */}
-      <div className="flex items-start gap-2 rounded-xl border border-mercury-100 bg-mercury-50 px-3 py-2.5">
-        <Search className="mt-0.5 h-3.5 w-3.5 shrink-0 text-mercury-500" />
-        <div>
-          <p className="text-xs font-semibold text-mercury-700">
-            Coming in Phase 2
-          </p>
-          <p className="mt-0.5 text-[11px] text-mercury-600 leading-relaxed">
-            AI detection scoring will be available in the next release. This
-            will analyze your selection and estimate the probability that it was
-            AI-generated.
+      {selectedText.trim().length >= 10 ? (
+        <AIDetectionBadge text={selectedText} />
+      ) : (
+        <div className="flex items-start gap-2 rounded-xl border border-mercury-100 bg-mercury-50 px-3 py-2.5">
+          <Search className="mt-0.5 h-3.5 w-3.5 shrink-0 text-mercury-500" />
+          <p className="text-xs text-mercury-600 leading-relaxed">
+            Select at least a sentence to analyze for AI patterns.
           </p>
         </div>
-      </div>
+      )}
     </div>
   );
 }
@@ -397,40 +296,50 @@ export function FloatingRibbon({
   isFlipped,
   onClose,
 }: FloatingRibbonProps) {
-  // These props are passed through to AI action handlers wired in by the
-  // integration agent. Void here to satisfy strict no-unused-vars until then.
-  void editor;
-  void selectedText;
-  void selectionRange;
   const config = MODE_CONFIG[mode];
   const accentClasses = ACCENT_CLASSES[config.accentColor];
 
-  // Internal state — the integration agent will lift/wire these later
+  // Internal state for rewrite and stylize modes
   const [rewriteAlternatives] = useState<string[]>([]);
   const [rewriteLoading, setRewriteLoading] = useState(false);
   const [selectedStyle, setSelectedStyle] = useState<StyleChip | null>(null);
-  const [humanizeCount, setHumanizeCount] = useState(2);
-  const [humanizeLoading, setHumanizeLoading] = useState(false);
 
   const ribbonStyle = computeRibbonStyle(position, isFlipped);
 
-  // Placeholder handlers — wired in by integration agent
+  // Placeholder handlers for rewrite/stylize (TODO: wire AI in future phase)
   const handleRewriteGenerate = () => {
     setRewriteLoading(true);
-    // TODO (integration): call AI and populate alternatives
     setTimeout(() => setRewriteLoading(false), 0);
   };
 
   const handleStyleSelect = (style: StyleChip) => {
     setSelectedStyle(style);
-    // TODO (integration): trigger AI action with style
   };
 
-  const handleHumanizeGenerate = () => {
-    setHumanizeLoading(true);
-    // TODO (integration): call AI with humanizeCount
-    setTimeout(() => setHumanizeLoading(false), 0);
-  };
+  // Humanizer apply callback — closes the ribbon after applying
+  const handleHumanizeApply = useCallback(() => {
+    // HumanizerPanel handles the editor replacement internally,
+    // so we just need to close the ribbon after a brief delay
+  }, []);
+
+  // ── Humanize mode renders the full HumanizerPanel ──
+  if (mode === "humanize") {
+    return (
+      <div
+        data-floating-menu
+        style={ribbonStyle}
+      >
+        <HumanizerPanel
+          editor={editor}
+          selectedText={selectedText}
+          selectionRange={selectionRange}
+          context={editor.getText()}
+          onClose={onClose}
+          onApply={handleHumanizeApply}
+        />
+      </div>
+    );
+  }
 
   return (
     <motion.div
@@ -488,17 +397,7 @@ export function FloatingRibbon({
           />
         )}
 
-        {mode === "humanize" && (
-          <HumanizeContent
-            accentClasses={accentClasses}
-            count={humanizeCount}
-            isLoading={humanizeLoading}
-            onCountChange={setHumanizeCount}
-            onGenerate={handleHumanizeGenerate}
-          />
-        )}
-
-        {mode === "detect" && <DetectContent accentClasses={accentClasses} />}
+        {mode === "detect" && <DetectContent selectedText={selectedText} />}
       </div>
     </motion.div>
   );
