@@ -37,6 +37,21 @@ import { ABSTRACT_PROMPT } from "./commands/abstract";
 import { REWRITE_PROMPT } from "./commands/rewrite";
 import { DIFFUSE_PROMPT } from "./commands/diffuse";
 import { MERMAID_PROMPT } from "./commands/mermaid";
+import { SYNONYMS_PROMPT } from "./synonyms/synonyms";
+import { SYNONYMS_NO_CONTEXT_PROMPT } from "./synonyms/synonyms-no-context";
+import { SYNONYMS_LONG_PROMPT } from "./synonyms/synonyms-long";
+import { SYNONYMS_LONG_NO_CONTEXT_PROMPT } from "./synonyms/synonyms-long-no-context";
+import { SYNONYMS_MORE_PROMPT } from "./synonyms/synonyms-more";
+import { STYLIZE_PROMPT } from "./stylize/stylize";
+import { STYLIZE_NO_CONTEXT_PROMPT } from "./stylize/stylize-no-context";
+import { STYLIZE_MORE_PROMPT } from "./stylize/stylize-more";
+import { GENERATE_NAME_PROMPT } from "./document/generate-name";
+import { FIX_PROMPT } from "./fix/fix";
+import { CUSTOM_PROMPT } from "./custom/custom";
+import { CUSTOM_NO_CONTEXT_PROMPT } from "./custom/custom-no-context";
+import { ANALYZE_TONE_PROMPT } from "./assistant/analyze-tone";
+import { SUMMARIZE_PROMPT } from "./assistant/summarize";
+import { CONTINUE_PROMPT } from "./assistant/continue";
 
 /**
  * Registry mapping command IDs to their raw prompt templates.
@@ -55,6 +70,21 @@ const COMMAND_PROMPTS: Record<string, string> = {
   rewrite: REWRITE_PROMPT,
   diffuse: DIFFUSE_PROMPT,
   mermaid: MERMAID_PROMPT,
+  synonym: SYNONYMS_PROMPT,
+  "synonym-no-context": SYNONYMS_NO_CONTEXT_PROMPT,
+  "synonym-long": SYNONYMS_LONG_PROMPT,
+  "synonym-long-no-context": SYNONYMS_LONG_NO_CONTEXT_PROMPT,
+  "synonym-more": SYNONYMS_MORE_PROMPT,
+  stylize: STYLIZE_PROMPT,
+  "stylize-no-context": STYLIZE_NO_CONTEXT_PROMPT,
+  "stylize-more": STYLIZE_MORE_PROMPT,
+  "generate-name": GENERATE_NAME_PROMPT,
+  fix: FIX_PROMPT,
+  custom: CUSTOM_PROMPT,
+  "custom-no-context": CUSTOM_NO_CONTEXT_PROMPT,
+  "analyze-tone": ANALYZE_TONE_PROMPT,
+  summarize: SUMMARIZE_PROMPT,
+  continue: CONTINUE_PROMPT,
 };
 
 /**
@@ -77,6 +107,14 @@ export function getRawChatPrompt(): string {
  */
 export function getRawSystemPrompt(): string {
   return ACADEMIC_SYSTEM_PROMPT;
+}
+
+/**
+ * Get the raw generate-name prompt template.
+ * Used by auto-naming logic in the editor store.
+ */
+export function getRawGenerateNamePrompt(): string {
+  return GENERATE_NAME_PROMPT;
 }
 
 export { COMMAND_PROMPTS };

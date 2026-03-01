@@ -2,13 +2,18 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Sparkles, RefreshCw, Minimize2, GraduationCap, Maximize2 } from "lucide-react";
+import { Sparkles, RefreshCw, Minimize2, GraduationCap, Maximize2, Wand2, Search, Palette, Wrench, Settings2, Mic2 } from "lucide-react";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils/cn";
 import { applyEdit, streamChatCompletion } from "@/lib/mercury/client";
 import { routePrompt } from "@/lib/prompts/router";
 import { getCommandPrompt } from "@/lib/prompts";
+import { getTemperature } from "@/lib/constants/temperatures";
 import { markdownToHtml } from "@/lib/utils/markdown-to-html";
 import { useEditorStore } from "@/lib/store/editor-store";
+import { FloatingRibbon } from "@/components/editor/floating-ribbon";
+import type { RibbonMode } from "@/components/editor/floating-ribbon";
+import type { ScribexShortcutEvent } from "@/lib/extensions/keyboard-shortcuts";
 import type { Editor } from "@tiptap/react";
 
 // ─── Types ────────────────────────────────────────────────────
@@ -28,25 +33,35 @@ interface FloatingMenuState {
 
 // ─── Action Definitions ────────────────────────────────────────
 
+type DirectActionId = "simplify" | "academic" | "expand";
+type RibbonActionId = "rewrite" | "stylize" | "humanize" | "detect" | "fix" | "custom" | "tone";
+type ActionId = DirectActionId | RibbonActionId;
+
 interface ActionButton {
-  id: "rewrite" | "simplify" | "academic" | "expand";
+  id: ActionId;
   label: string;
   Icon: React.ComponentType<{ className?: string }>;
   hoverBg: string;
   hoverText: string;
   pos: { normal: { x: number; y: number }; flipped: { x: number; y: number } };
+  /** If true, opens the FloatingRibbon instead of triggering a direct AI call */
+  opensRibbon?: boolean;
+  /** Optional keyboard shortcut hint shown in the tooltip */
+  shortcut?: string;
 }
 
 const ACTIONS: ActionButton[] = [
   {
     id: "rewrite",
     label: "Rewrite",
+    shortcut: "⌘⇧R",
     Icon: RefreshCw,
     hoverBg: "hover:bg-brand-500",
     hoverText: "hover:text-white",
+    opensRibbon: true,
     pos: {
-      normal: { x: -56, y: -28 },
-      flipped: { x: -56, y: 28 },
+      normal: { x: -72, y: -20 },
+      flipped: { x: -72, y: 20 },
     },
   },
   {
@@ -56,8 +71,8 @@ const ACTIONS: ActionButton[] = [
     hoverBg: "hover:bg-brand-500",
     hoverText: "hover:text-white",
     pos: {
-      normal: { x: -22, y: -58 },
-      flipped: { x: -22, y: 58 },
+      normal: { x: -52, y: -52 },
+      flipped: { x: -52, y: 52 },
     },
   },
   {
@@ -67,8 +82,8 @@ const ACTIONS: ActionButton[] = [
     hoverBg: "hover:bg-mercury-500",
     hoverText: "hover:text-white",
     pos: {
-      normal: { x: 22, y: -58 },
-      flipped: { x: 22, y: 58 },
+      normal: { x: -16, y: -72 },
+      flipped: { x: -16, y: 72 },
     },
   },
   {
@@ -78,8 +93,84 @@ const ACTIONS: ActionButton[] = [
     hoverBg: "hover:bg-brand-500",
     hoverText: "hover:text-white",
     pos: {
-      normal: { x: 56, y: -28 },
-      flipped: { x: 56, y: 28 },
+      normal: { x: 24, y: -72 },
+      flipped: { x: 24, y: 72 },
+    },
+  },
+  {
+    id: "stylize",
+    label: "Stylize",
+    shortcut: "⌘⇧Y",
+    Icon: Palette,
+    hoverBg: "hover:bg-mercury-500",
+    hoverText: "hover:text-white",
+    opensRibbon: true,
+    pos: {
+      normal: { x: 60, y: -52 },
+      flipped: { x: 60, y: 52 },
+    },
+  },
+  {
+    id: "humanize",
+    label: "Humanize",
+    shortcut: "⌘⇧H",
+    Icon: Wand2,
+    hoverBg: "hover:bg-brand-500",
+    hoverText: "hover:text-white",
+    opensRibbon: true,
+    pos: {
+      normal: { x: 80, y: -16 },
+      flipped: { x: 80, y: 16 },
+    },
+  },
+  {
+    id: "fix",
+    label: "Fix",
+    shortcut: "⌘⇧F",
+    Icon: Wrench,
+    hoverBg: "hover:bg-brand-500",
+    hoverText: "hover:text-white",
+    opensRibbon: true,
+    pos: {
+      normal: { x: 72, y: 28 },
+      flipped: { x: 72, y: -28 },
+    },
+  },
+  {
+    id: "detect",
+    label: "Detect AI",
+    shortcut: "⌘⇧D",
+    Icon: Search,
+    hoverBg: "hover:bg-mercury-500",
+    hoverText: "hover:text-white",
+    opensRibbon: true,
+    pos: {
+      normal: { x: 40, y: 60 },
+      flipped: { x: 40, y: -60 },
+    },
+  },
+  {
+    id: "custom",
+    label: "Custom",
+    Icon: Settings2,
+    hoverBg: "hover:bg-mercury-500",
+    hoverText: "hover:text-white",
+    opensRibbon: true,
+    pos: {
+      normal: { x: -16, y: 76 },
+      flipped: { x: -16, y: -76 },
+    },
+  },
+  {
+    id: "tone",
+    label: "Tone",
+    Icon: Mic2,
+    hoverBg: "hover:bg-brand-500",
+    hoverText: "hover:text-white",
+    opensRibbon: true,
+    pos: {
+      normal: { x: -56, y: 56 },
+      flipped: { x: -56, y: -56 },
     },
   },
 ];
@@ -130,6 +221,8 @@ export function FloatingMenu({ editor }: FloatingMenuProps) {
   });
   const [isFanOpen, setIsFanOpen] = useState(false);
   const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
+  const [activeRibbonMode, setActiveRibbonMode] = useState<RibbonMode | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -146,6 +239,7 @@ export function FloatingMenu({ editor }: FloatingMenuProps) {
       if (from === to) {
         setMenuState((prev) => ({ ...prev, isVisible: false }));
         setIsFanOpen(false);
+        setActiveRibbonMode(null);
         return;
       }
 
@@ -155,6 +249,7 @@ export function FloatingMenu({ editor }: FloatingMenuProps) {
       if (!selectedText.trim()) {
         setMenuState((prev) => ({ ...prev, isVisible: false }));
         setIsFanOpen(false);
+        setActiveRibbonMode(null);
         return;
       }
 
@@ -172,6 +267,7 @@ export function FloatingMenu({ editor }: FloatingMenuProps) {
         ) {
           setMenuState((prev) => ({ ...prev, isVisible: false }));
           setIsFanOpen(false);
+          setActiveRibbonMode(null);
           return;
         }
       }
@@ -217,6 +313,28 @@ export function FloatingMenu({ editor }: FloatingMenuProps) {
     };
   }, [editor]);
 
+  // Listen for keyboard shortcut events dispatched by AIKeyboardShortcuts extension
+  useEffect(() => {
+    const handleShortcut = (e: CustomEvent<ScribexShortcutEvent>) => {
+      if (isAIStreaming) return;
+
+      // Only act if there is a non-collapsed selection
+      const { from, to } = editor.state.selection;
+      if (from === to) return;
+
+      const selectedText = editor.state.doc.textBetween(from, to, " ");
+      if (!selectedText.trim()) return;
+
+      // Map shortcut action → ribbon mode and open
+      const action = e.detail.action;
+      setIsFanOpen(false);
+      setActiveRibbonMode(action);
+    };
+
+    document.addEventListener("scribex:shortcut", handleShortcut);
+    return () => document.removeEventListener("scribex:shortcut", handleShortcut);
+  }, [editor, isAIStreaming]);
+
   // Close fan when clicking outside the floating menu
   useEffect(() => {
     if (!isFanOpen) return;
@@ -234,11 +352,12 @@ export function FloatingMenu({ editor }: FloatingMenuProps) {
   // ── Action handlers ────────────────────────────────────────
 
   const handleQuickEdit = useCallback(
-    async (action: "simplify" | "academic") => {
+    async (action: DirectActionId) => {
       const { selectedText, selectionRange } = menuState;
       if (!selectionRange || !selectedText.trim()) return;
 
       setIsFanOpen(false);
+      setIsProcessing(true);
 
       const store = useEditorStore.getState();
       store.setActiveWritingMode("quick-edit");
@@ -254,35 +373,31 @@ export function FloatingMenu({ editor }: FloatingMenuProps) {
           .deleteRange(selectionRange)
           .insertContentAt(selectionRange.from, markdownToHtml(result))
           .run();
+        toast.success("Text updated", { duration: 2000 });
       } catch {
-        // Keep editor stable on failure
+        toast.error("Failed to process text", { duration: 3000 });
       }
 
       store.setIsAIStreaming(false);
       store.setActiveWritingMode(null);
+      setIsProcessing(false);
     },
     [editor, menuState]
   );
 
   const handleStreamEdit = useCallback(
-    async (action: "rewrite" | "expand") => {
+    async (action: "expand") => {
       const { selectedText, selectionRange } = menuState;
       if (!selectionRange || !selectedText.trim()) return;
 
       setIsFanOpen(false);
+      setIsProcessing(true);
 
       const store = useEditorStore.getState();
-      const mode = action === "rewrite" ? "deep-rewrite" : "compose";
-      store.setActiveWritingMode(mode);
+      store.setActiveWritingMode("compose");
       store.setIsAIStreaming(true);
 
       const documentText = editor.getText();
-      const reasoningEffort =
-        action === "rewrite"
-          ? store.reasoningEffort === "instant" || store.reasoningEffort === "low"
-            ? "high"
-            : store.reasoningEffort
-          : store.reasoningEffort;
 
       const routed = routePrompt({
         action,
@@ -307,7 +422,8 @@ export function FloatingMenu({ editor }: FloatingMenuProps) {
       });
 
       await streamChatCompletion([{ role: "user", content: userPrompt }], {
-        reasoningEffort,
+        reasoningEffort: store.reasoningEffort,
+        temperature: getTemperature(action),
         onChunk: (text) => {
           accumulated += text;
           updateLastAIMessage(accumulated);
@@ -315,53 +431,76 @@ export function FloatingMenu({ editor }: FloatingMenuProps) {
         onDone: () => {
           store.setIsAIStreaming(false);
           store.setActiveWritingMode(null);
+          setIsProcessing(false);
           if (!accumulated.trim() || !selectionRange) return;
 
-          if (action === "rewrite") {
-            editor
-              .chain()
-              .focus()
-              .deleteRange(selectionRange)
-              .insertContentAt(selectionRange.from, markdownToHtml(accumulated))
-              .run();
-          } else {
-            // Expand: insert after the selection
-            editor
-              .chain()
-              .focus()
-              .setTextSelection(selectionRange.to)
-              .insertContent(markdownToHtml(accumulated))
-              .run();
-          }
+          // Expand: insert after the selection
+          editor
+            .chain()
+            .focus()
+            .setTextSelection(selectionRange.to)
+            .insertContent(markdownToHtml(accumulated))
+            .run();
+          toast.success("Text expanded", { duration: 2000 });
         },
         onError: () => {
           store.setIsAIStreaming(false);
           store.setActiveWritingMode(null);
+          setIsProcessing(false);
+          toast.error("Failed to expand text", { duration: 3000 });
         },
       });
     },
     [editor, menuState, addAIMessage, updateLastAIMessage]
   );
 
+  const handleOpenRibbon = useCallback(
+    (mode: RibbonMode) => {
+      setIsFanOpen(false);
+      setActiveRibbonMode(mode);
+    },
+    []
+  );
+
   const handleAction = useCallback(
-    (actionId: ActionButton["id"]) => {
+    (actionId: ActionId) => {
       if (isAIStreaming) return;
+
+      const action = ACTIONS.find((a) => a.id === actionId);
+      if (action?.opensRibbon) {
+        handleOpenRibbon(actionId as RibbonMode);
+        return;
+      }
 
       if (actionId === "simplify" || actionId === "academic") {
         handleQuickEdit(actionId);
-      } else {
+      } else if (actionId === "expand") {
         handleStreamEdit(actionId);
       }
     },
-    [isAIStreaming, handleQuickEdit, handleStreamEdit]
+    [isAIStreaming, handleQuickEdit, handleStreamEdit, handleOpenRibbon]
   );
 
   // ── Render ─────────────────────────────────────────────────
 
-  if (!menuState.isVisible || isAIStreaming) return null;
+  if (!menuState.isVisible) return null;
 
   return (
     <AnimatePresence>
+      {/* ── Floating Ribbon (renders when a ribbon mode is active) ── */}
+      {activeRibbonMode && menuState.selectionRange && (
+        <FloatingRibbon
+          key={`ribbon-${activeRibbonMode}`}
+          editor={editor}
+          mode={activeRibbonMode}
+          selectedText={menuState.selectedText}
+          selectionRange={menuState.selectionRange}
+          position={{ top: menuState.top, left: menuState.left }}
+          isFlipped={menuState.isFlipped}
+          onClose={() => setActiveRibbonMode(null)}
+        />
+      )}
+
       <motion.div
         ref={menuRef}
         key="floating-menu"
@@ -427,6 +566,7 @@ export function FloatingMenu({ editor }: FloatingMenuProps) {
                           "pointer-events-none absolute whitespace-nowrap",
                           "rounded-md bg-ink-900 px-2 py-1",
                           "text-[11px] font-medium text-white shadow-lg",
+                          "flex items-center gap-1.5",
                           // Position above or below depending on flip state and Y offset
                           menuState.isFlipped
                             ? "top-full mt-1.5 left-1/2 -translate-x-1/2"
@@ -435,6 +575,11 @@ export function FloatingMenu({ editor }: FloatingMenuProps) {
                         role="tooltip"
                       >
                         {action.label}
+                        {action.shortcut && (
+                          <span className="opacity-60 text-[10px] font-normal">
+                            {action.shortcut}
+                          </span>
+                        )}
                       </span>
                     )}
                   </button>
@@ -446,10 +591,10 @@ export function FloatingMenu({ editor }: FloatingMenuProps) {
         {/* ── Central trigger button ── */}
         <button
           type="button"
-          aria-label={isFanOpen ? "Close AI actions" : "Open AI actions"}
+          aria-label={isProcessing ? "Processing…" : isFanOpen ? "Close AI actions" : "Open AI actions"}
           aria-expanded={isFanOpen}
-          disabled={isAIStreaming}
-          onClick={() => setIsFanOpen((open) => !open)}
+          disabled={isAIStreaming && !isProcessing}
+          onClick={() => !isProcessing && setIsFanOpen((open) => !open)}
           className={cn(
             "relative flex h-11 w-11 items-center justify-center rounded-full",
             "bg-brand-600 text-white shadow-md",
@@ -458,16 +603,26 @@ export function FloatingMenu({ editor }: FloatingMenuProps) {
             "active:scale-95",
             "disabled:cursor-not-allowed disabled:opacity-50",
             "focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 focus-visible:ring-offset-2",
-            // Subtle pulse ring when closed (invites interaction)
-            !isFanOpen && "ring-2 ring-brand-300/30"
+            // Pulse ring when closed (invites interaction)
+            !isFanOpen && !isProcessing && "ring-2 ring-brand-300/30",
+            // Processing: animate pulse-glow
+            isProcessing && "[animation:pulse-glow_1.2s_ease-in-out_infinite]"
           )}
         >
           <Sparkles
             className={cn(
               "h-5 w-5 transition-transform duration-200",
-              isFanOpen && "rotate-45 scale-90"
+              isFanOpen && !isProcessing && "rotate-45 scale-90",
+              isProcessing && "animate-pulse"
             )}
           />
+          {/* Processing ring */}
+          {isProcessing && (
+            <span
+              className="absolute inset-0 rounded-full border-2 border-brand-300/60 animate-ping"
+              aria-hidden
+            />
+          )}
         </button>
       </motion.div>
     </AnimatePresence>

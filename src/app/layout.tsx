@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { IBM_Plex_Mono, Manrope, Newsreader } from "next/font/google";
+import { DarkModeProvider } from "@/components/shared/dark-mode-provider";
 import { ToasterProvider } from "@/components/shared/toaster-provider";
 import "./globals.css";
 
@@ -54,6 +55,7 @@ export default function RootLayout({
         className={`${manrope.variable} ${newsreader.variable} ${ibmPlexMono.variable} font-sans bg-white text-ink-800 antialiased`}
       >
         {children}
+        <DarkModeProvider />
         <ToasterProvider />
       </body>
     </html>

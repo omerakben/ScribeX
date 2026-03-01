@@ -85,6 +85,23 @@
   opacity: 0.5;
   pointer-events: none;
   user-select: none;
+  position: relative;
+}
+
+/* Badge showing alternative index (e.g. "2/3") when cycling */
+.ghost-text-badge {
+  position: absolute;
+  top: -1.4em;
+  left: 0;
+  font-size: 0.65em;
+  line-height: 1;
+  padding: 1px 4px;
+  border-radius: 3px;
+  background: var(--color-ink-200);
+  color: var(--color-ink-500);
+  opacity: 0.8;
+  white-space: nowrap;
+  pointer-events: none;
 }
 
 @keyframes fade-in {
@@ -176,22 +193,153 @@ body {
   color: var(--color-ink-900);
 }
 
+/* ── Dark mode: .dark class (manual toggle) ── */
+.dark {
+  /* Surface tokens */
+  --color-surface: oklch(14.8% 0.018 252);
+  --color-surface-secondary: oklch(17.4% 0.020 252);
+  --color-surface-tertiary: oklch(20.2% 0.022 252);
+  --color-surface-elevated: oklch(22.8% 0.024 252);
+
+  /* White → dark surface base */
+  --color-white: oklch(15% 0.016 252);
+
+  /* Ink scale: inverted lightness (warm stone neutral) */
+  --color-ink-50: oklch(15.8% 0.010 72);
+  --color-ink-100: oklch(20% 0.014 72);
+  --color-ink-200: oklch(25% 0.018 72);
+  --color-ink-300: oklch(32% 0.022 72);
+  --color-ink-400: oklch(45% 0.026 72);
+  --color-ink-500: oklch(56% 0.030 72);
+  --color-ink-600: oklch(65% 0.030 72);
+  --color-ink-700: oklch(72% 0.024 72);
+  --color-ink-800: oklch(82% 0.018 72);
+  --color-ink-900: oklch(90% 0.014 72);
+  --color-ink-950: oklch(96% 0.010 72);
+
+  /* Brand scale: shifted for dark backgrounds */
+  --color-brand-50: oklch(16.4% 0.058 252);
+  --color-brand-100: oklch(20% 0.068 252);
+  --color-brand-200: oklch(25% 0.086 252);
+  --color-brand-300: oklch(36% 0.112 252);
+  --color-brand-400: oklch(50% 0.134 252);
+  --color-brand-500: oklch(58% 0.148 252);
+  --color-brand-600: oklch(66% 0.148 252);
+  --color-brand-700: oklch(74% 0.134 252);
+  --color-brand-800: oklch(82% 0.098 252);
+  --color-brand-900: oklch(90% 0.048 252);
+  --color-brand-950: oklch(96% 0.024 252);
+
+  /* Mercury scale: inverted lightness (cool teal) */
+  --color-mercury-50: oklch(17.2% 0.022 195);
+  --color-mercury-100: oklch(20% 0.028 195);
+  --color-mercury-200: oklch(25% 0.034 195);
+  --color-mercury-300: oklch(32% 0.046 195);
+  --color-mercury-400: oklch(44% 0.058 195);
+  --color-mercury-500: oklch(56% 0.072 195);
+  --color-mercury-600: oklch(65% 0.068 195);
+  --color-mercury-700: oklch(74% 0.054 195);
+  --color-mercury-800: oklch(83% 0.034 195);
+  --color-mercury-900: oklch(91% 0.018 195);
+  --color-mercury-950: oklch(96% 0.008 195);
+
+  /* Semantic colors: brightened for dark bg visibility */
+  --color-success: oklch(58% 0.128 152);
+  --color-warning: oklch(68% 0.138 62);
+  --color-error: oklch(60% 0.158 22);
+  --color-info: oklch(62% 0.142 252);
+
+  /* Shadows: deeper for dark surfaces */
+  --shadow-xs: 0 1px 2px oklch(0% 0 0 / 0.2);
+  --shadow-sm: 0 1px 4px oklch(0% 0 0 / 0.22), 0 2px 8px oklch(0% 0 0 / 0.18);
+  --shadow-md: 0 4px 12px oklch(0% 0 0 / 0.28), 0 8px 24px oklch(0% 0 0 / 0.22);
+  --shadow-lg: 0 12px 32px oklch(0% 0 0 / 0.35), 0 20px 48px oklch(0% 0 0 / 0.25);
+  --shadow-xl: 0 24px 64px oklch(0% 0 0 / 0.45);
+}
+
+.dark body {
+  color: var(--color-ink-800);
+  background-color: oklch(13.2% 0.016 252);
+}
+
+.dark ::selection {
+  background: var(--color-brand-300);
+  color: var(--color-ink-950);
+}
+
+/* ── Dark mode: system preference (respects OS setting without manual toggle) ── */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not(.light) {
+    /* Surface tokens */
     --color-surface: oklch(14.8% 0.018 252);
     --color-surface-secondary: oklch(17.4% 0.020 252);
     --color-surface-tertiary: oklch(20.2% 0.022 252);
     --color-surface-elevated: oklch(22.8% 0.024 252);
+
+    /* White → dark surface base */
+    --color-white: oklch(15% 0.016 252);
+
+    /* Ink scale: inverted lightness */
+    --color-ink-50: oklch(15.8% 0.010 72);
+    --color-ink-100: oklch(20% 0.014 72);
+    --color-ink-200: oklch(25% 0.018 72);
+    --color-ink-300: oklch(32% 0.022 72);
+    --color-ink-400: oklch(45% 0.026 72);
+    --color-ink-500: oklch(56% 0.030 72);
+    --color-ink-600: oklch(65% 0.030 72);
+    --color-ink-700: oklch(72% 0.024 72);
+    --color-ink-800: oklch(82% 0.018 72);
+    --color-ink-900: oklch(90% 0.014 72);
+    --color-ink-950: oklch(96% 0.010 72);
+
+    /* Brand scale: shifted for dark backgrounds */
+    --color-brand-50: oklch(16.4% 0.058 252);
+    --color-brand-100: oklch(20% 0.068 252);
+    --color-brand-200: oklch(25% 0.086 252);
+    --color-brand-300: oklch(36% 0.112 252);
+    --color-brand-400: oklch(50% 0.134 252);
+    --color-brand-500: oklch(58% 0.148 252);
+    --color-brand-600: oklch(66% 0.148 252);
+    --color-brand-700: oklch(74% 0.134 252);
+    --color-brand-800: oklch(82% 0.098 252);
+    --color-brand-900: oklch(90% 0.048 252);
+    --color-brand-950: oklch(96% 0.024 252);
+
+    /* Mercury scale: inverted lightness */
+    --color-mercury-50: oklch(17.2% 0.022 195);
+    --color-mercury-100: oklch(20% 0.028 195);
+    --color-mercury-200: oklch(25% 0.034 195);
+    --color-mercury-300: oklch(32% 0.046 195);
+    --color-mercury-400: oklch(44% 0.058 195);
+    --color-mercury-500: oklch(56% 0.072 195);
+    --color-mercury-600: oklch(65% 0.068 195);
+    --color-mercury-700: oklch(74% 0.054 195);
+    --color-mercury-800: oklch(83% 0.034 195);
+    --color-mercury-900: oklch(91% 0.018 195);
+    --color-mercury-950: oklch(96% 0.008 195);
+
+    /* Semantic colors: brightened for dark bg */
+    --color-success: oklch(58% 0.128 152);
+    --color-warning: oklch(68% 0.138 62);
+    --color-error: oklch(60% 0.158 22);
+    --color-info: oklch(62% 0.142 252);
+
+    /* Shadows: deeper for dark surfaces */
+    --shadow-xs: 0 1px 2px oklch(0% 0 0 / 0.2);
+    --shadow-sm: 0 1px 4px oklch(0% 0 0 / 0.22), 0 2px 8px oklch(0% 0 0 / 0.18);
+    --shadow-md: 0 4px 12px oklch(0% 0 0 / 0.28), 0 8px 24px oklch(0% 0 0 / 0.22);
+    --shadow-lg: 0 12px 32px oklch(0% 0 0 / 0.35), 0 20px 48px oklch(0% 0 0 / 0.25);
+    --shadow-xl: 0 24px 64px oklch(0% 0 0 / 0.45);
   }
 
-  body {
-    color: var(--color-ink-100);
+  body:not(.light *) {
+    color: var(--color-ink-800);
     background-color: oklch(13.2% 0.016 252);
   }
 
   ::selection {
-    background: var(--color-brand-800);
-    color: var(--color-ink-50);
+    background: var(--color-brand-300);
+    color: var(--color-ink-950);
   }
 }
 
@@ -214,13 +362,21 @@ body {
   background: var(--color-ink-400);
 }
 
+.dark *::-webkit-scrollbar-thumb {
+  background: var(--color-ink-400);
+}
+
+.dark *::-webkit-scrollbar-thumb:hover {
+  background: var(--color-ink-500);
+}
+
 @media (prefers-color-scheme: dark) {
-  *::-webkit-scrollbar-thumb {
-    background: var(--color-ink-700);
+  :root:not(.light) *::-webkit-scrollbar-thumb {
+    background: var(--color-ink-400);
   }
 
-  *::-webkit-scrollbar-thumb:hover {
-    background: var(--color-ink-600);
+  :root:not(.light) *::-webkit-scrollbar-thumb:hover {
+    background: var(--color-ink-500);
   }
 }
 
@@ -470,60 +626,10 @@ body {
   font-family: var(--font-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  .tiptap {
-    color: var(--color-ink-200);
-  }
-
-  .tiptap h1,
-  .tiptap h2,
-  .tiptap h3 {
-    color: var(--color-ink-50);
-  }
-
-  .tiptap blockquote {
-    border-left-color: var(--color-ink-700);
-    color: var(--color-ink-400);
-  }
-
-  .tiptap code {
-    background: var(--color-ink-800);
-    color: var(--color-brand-300);
-  }
-
-  .tiptap pre {
-    background: var(--color-ink-950);
-    color: var(--color-ink-200);
-  }
-
-  .tiptap a {
-    color: var(--color-brand-400);
-  }
-
-  .tiptap .Tiptap-mathematics-editor {
-    background: var(--color-ink-800);
-    color: var(--color-brand-300);
-  }
-
-  .tiptap .Tiptap-mathematics-render:hover {
-    background: var(--color-brand-900);
-  }
-
-  .mermaid-block {
-    border-color: var(--color-ink-700);
-    background: var(--color-ink-900);
-  }
-
-  .mermaid-block__header {
-    background: var(--color-ink-800);
-    border-bottom-color: var(--color-ink-700);
-  }
-
-  .mermaid-block__editor {
-    color: var(--color-ink-200);
-    background: var(--color-ink-950);
-  }
-}
+/* Dark mode tiptap + mermaid: no longer needed — base selectors use var() refs
+   that automatically resolve via the inverted color scales in .dark {} above.
+   Kept as comment for clarity. The base .tiptap uses ink-800 (→82% in dark),
+   headings use ink-900 (→90%), code uses ink-100 bg (→20%), etc. */
 
 /* Utility: prose-academic for serif body text in editor contexts */
 .prose-academic {
@@ -547,15 +653,7 @@ body {
   font-style: italic;
 }
 
-@media (prefers-color-scheme: dark) {
-  .prose-academic {
-    color: var(--color-ink-200);
-  }
-
-  .prose-academic strong {
-    color: var(--color-ink-100);
-  }
-}
+/* .dark .prose-academic overrides removed — handled by inverted color scales */
 
 @keyframes template-card-enter {
   from {
@@ -638,41 +736,23 @@ body {
   animation-delay: var(--template-delay, 0ms);
 }
 
+/* Template dark overrides: only the hardcoded radial gradient needs manual override.
+   All var()-based colors (borders, icons, cta) resolve via inverted scales. */
+.dark .templates-page-shell::before {
+  background: radial-gradient(
+    circle at center,
+    oklch(36.4% 0.134 252 / 0.24) 0%,
+    oklch(14.8% 0.018 252 / 0) 70%
+  );
+}
+
 @media (prefers-color-scheme: dark) {
-  .templates-page-shell::before {
+  :root:not(.light) .templates-page-shell::before {
     background: radial-gradient(
       circle at center,
       oklch(36.4% 0.134 252 / 0.24) 0%,
       oklch(14.8% 0.018 252 / 0) 70%
     );
-  }
-
-  .templates-intro-panel,
-  .template-card {
-    border-color: var(--color-ink-700);
-  }
-
-  .template-card:hover,
-  .template-card:focus-visible {
-    border-color: var(--color-brand-500);
-  }
-
-  .template-card:focus-visible {
-    outline-color: oklch(53.8% 0.148 252 / 0.55);
-  }
-
-  .template-card:hover .template-icon-wrap,
-  .template-card:focus-visible .template-icon-wrap {
-    background: var(--color-brand-900);
-  }
-
-  .template-card:hover .template-icon-wrap svg,
-  .template-card:focus-visible .template-icon-wrap svg {
-    color: var(--color-brand-300);
-  }
-
-  .template-card-cta {
-    color: var(--color-brand-300);
   }
 }
 

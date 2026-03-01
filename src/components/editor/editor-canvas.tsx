@@ -26,12 +26,16 @@ import Subscript from "@tiptap/extension-subscript";
 import { applyEdit, streamChatCompletion } from "@/lib/mercury/client";
 import { routePrompt } from "@/lib/prompts/router";
 import { getCommandPrompt } from "@/lib/prompts";
+import { getTemperature } from "@/lib/constants/temperatures";
 import { markdownToHtml } from "@/lib/utils/markdown-to-html";
 import { GhostText } from "@/lib/extensions/ghost-text";
 import { MermaidBlock } from "@/lib/extensions/mermaid-block";
+import { AIKeyboardShortcuts } from "@/lib/extensions/keyboard-shortcuts";
 import { useEditorStore } from "@/lib/store/editor-store";
 import { DiffusionOverlay } from "@/components/editor/diffusion-overlay";
 import { FloatingMenu } from "@/components/editor/floating-menu";
+import { ReadabilityBadge } from "@/components/editor/readability-badge";
+import { DocumentStats } from "@/components/editor/document-stats";
 import { SlashCommandMenu } from "@/components/editor/slash-command-menu";
 import type { SlashCommand } from "@/lib/types";
 import type { Editor } from "@tiptap/react";
@@ -88,6 +92,7 @@ export function EditorCanvas({ onEditorReady }: EditorCanvasProps) {
         katexOptions: { throwOnError: false, strict: false },
       }),
       GhostText.configure({ enabled: autocompleteEnabled }),
+      AIKeyboardShortcuts,
     ],
     content: currentPaper?.content || "",
     editorProps: {
@@ -192,6 +197,7 @@ export function EditorCanvas({ onEditorReady }: EditorCanvasProps) {
               [{ role: "user", content: userPrompt }],
               {
                 reasoningEffort,
+                temperature: getTemperature(command.action),
                 diffusing: true,
                 onChunk: () => {},
                 onDiffusionStep: (fullText, step) => {
@@ -231,6 +237,7 @@ export function EditorCanvas({ onEditorReady }: EditorCanvasProps) {
               [{ role: "user", content: userPrompt }],
               {
                 reasoningEffort,
+                temperature: getTemperature(command.action),
                 onChunk: (text) => {
                   accumulated += text;
                   updateLastAIMessage(accumulated);
@@ -339,6 +346,7 @@ export function EditorCanvas({ onEditorReady }: EditorCanvasProps) {
             [{ role: "user", content: rwPrompt }],
             {
               reasoningEffort: rwEffort === "instant" || rwEffort === "low" ? "high" : rwEffort,
+              temperature: getTemperature("rewrite"),
               onChunk: (text) => {
                 rwAccumulated += text;
                 updateLastAIMessage(rwAccumulated);
@@ -353,6 +361,106 @@ export function EditorCanvas({ onEditorReady }: EditorCanvasProps) {
               },
               onError: () => {
                 updateLastAIMessage(rwAccumulated, false);
+                setIsAIStreaming(false);
+                setActiveWritingMode(null);
+              },
+            }
+          );
+          break;
+        }
+
+        case "summarize": {
+          const { from: sumFrom, to: sumTo } = editor.state.selection;
+          const textToSummarize = sumFrom !== sumTo
+            ? editor.state.doc.textBetween(sumFrom, sumTo, " ")
+            : editor.getText();
+
+          if (!textToSummarize.trim()) return;
+
+          setActiveWritingMode("review");
+          setIsAIStreaming(true);
+
+          const sumPrompt = getCommandPrompt("summarize", { text: textToSummarize }) ?? textToSummarize;
+
+          let sumAccumulated = "";
+          addAIMessage({
+            id: crypto.randomUUID(),
+            role: "assistant",
+            content: "",
+            model: "mercury-2",
+            timestamp: new Date().toISOString(),
+            isStreaming: true,
+          });
+
+          await streamChatCompletion(
+            [{ role: "user", content: sumPrompt }],
+            {
+              reasoningEffort: useEditorStore.getState().reasoningEffort,
+              temperature: getTemperature("summarize"),
+              onChunk: (text) => {
+                sumAccumulated += text;
+                updateLastAIMessage(sumAccumulated);
+              },
+              onDone: () => {
+                updateLastAIMessage(sumAccumulated, false);
+                setIsAIStreaming(false);
+                setActiveWritingMode(null);
+              },
+              onError: () => {
+                updateLastAIMessage(sumAccumulated, false);
+                setIsAIStreaming(false);
+                setActiveWritingMode(null);
+              },
+            }
+          );
+          break;
+        }
+
+        case "continue": {
+          const { from: contFrom } = editor.state.selection;
+          const doc = editor.state.doc;
+
+          // Extract text before and after the cursor position
+          const textBefore = doc.textBetween(0, contFrom, "\n").trimEnd();
+          const textAfter = doc.textBetween(contFrom, doc.content.size, "\n").trimStart();
+
+          if (!textBefore.trim()) return;
+
+          setActiveWritingMode("compose");
+          setIsAIStreaming(true);
+
+          const contPrompt = getCommandPrompt("continue", { textBefore, textAfter }) ?? textBefore;
+          const reasoningEffort = useEditorStore.getState().reasoningEffort;
+
+          let contAccumulated = "";
+          addAIMessage({
+            id: crypto.randomUUID(),
+            role: "assistant",
+            content: "",
+            model: "mercury-2",
+            timestamp: new Date().toISOString(),
+            isStreaming: true,
+          });
+
+          await streamChatCompletion(
+            [{ role: "user", content: contPrompt }],
+            {
+              reasoningEffort,
+              temperature: getTemperature("continue"),
+              onChunk: (text) => {
+                contAccumulated += text;
+                updateLastAIMessage(contAccumulated);
+              },
+              onDone: () => {
+                updateLastAIMessage(contAccumulated, false);
+                setIsAIStreaming(false);
+                setActiveWritingMode(null);
+                if (contAccumulated.trim()) {
+                  editor.chain().focus().setTextSelection(contFrom).insertContent(markdownToHtml(contAccumulated)).run();
+                }
+              },
+              onError: () => {
+                updateLastAIMessage(contAccumulated, false);
                 setIsAIStreaming(false);
                 setActiveWritingMode(null);
               },
@@ -413,10 +521,14 @@ export function EditorCanvas({ onEditorReady }: EditorCanvasProps) {
       </div>
 
       <footer className="sticky bottom-0 bg-white border-t border-ink-200 px-4 pb-2 pt-1.5">
-        <p className="text-xs text-ink-400 text-right pr-4">
-          {editor.storage.characterCount.words().toLocaleString()} words &nbsp;&middot;&nbsp;{" "}
-          {editor.storage.characterCount.characters().toLocaleString()} characters
-        </p>
+        <div className="flex items-center justify-end gap-3 pr-4">
+          <p className="text-xs text-ink-400">
+            {editor.storage.characterCount.words().toLocaleString()} words &nbsp;&middot;&nbsp;{" "}
+            {editor.storage.characterCount.characters().toLocaleString()} characters
+          </p>
+          <DocumentStats editor={editor} />
+          <ReadabilityBadge editor={editor} />
+        </div>
       </footer>
     </section>
   );

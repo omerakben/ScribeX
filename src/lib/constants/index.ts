@@ -46,6 +46,8 @@ export const SLASH_COMMANDS: SlashCommand[] = [
   { id: "rewrite", label: "Deep Rewrite", description: "Substantially rewrite with high reasoning", icon: "refresh-cw", action: "rewrite", model: "mercury-2" },
   { id: "diffuse", label: "Diffuse", description: "Generate with Mercury's diffusion denoising effect", icon: "waves", action: "diffuse", model: "mercury-2" },
   { id: "mermaid", label: "Mermaid Diagram", description: "Insert a visual diagram", icon: "git-branch", action: "mermaid", model: "mercury-2" },
+  { id: "summarize", label: "Summarize", description: "Summarize selected text or document", icon: "file-text", action: "summarize", model: "mercury-2" },
+  { id: "continue", label: "Continue", description: "Continue writing from cursor position", icon: "play", action: "continue", model: "mercury-2" },
 ];
 
 // ─── Paper Templates ───────────────────────────────────────────

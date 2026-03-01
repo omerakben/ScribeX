@@ -1,9 +1,11 @@
 import { marked } from "marked";
+import { sanitizeHtml } from "./sanitize-html";
 
 /**
  * Convert markdown from Mercury API responses into HTML
  * that TipTap can render as rich text.
  * Preserves LaTeX math delimiters so the Mathematics extension can pick them up.
+ * Output is sanitized to prevent XSS from AI-generated content.
  */
 export function markdownToHtml(md: string): string {
   if (!md.trim()) return md;
@@ -36,5 +38,5 @@ export function markdownToHtml(md: string): string {
     html = html.replace(`%%INLINE_MATH_${i}%%`, `$$${latex}$$`);
   });
 
-  return html;
+  return sanitizeHtml(html);
 }

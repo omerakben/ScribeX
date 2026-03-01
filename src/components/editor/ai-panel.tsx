@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowDownToLine,
   BookOpen,
@@ -73,15 +73,27 @@ function getHighestCitationIndex(editor: Editor | null): number {
 // ─── Chat Tab ──────────────────────────────────────────────────
 
 function ChatTab({ editor }: { editor: Editor | null }) {
-  const aiMessages = useEditorStore((s) => s.aiMessages);
+  const chatHistories = useEditorStore((s) => s.chatHistories);
+  const currentPaperId = useEditorStore((s) => s.currentPaper?.id);
+  // Stable reference via useMemo — avoids hooks dependency churn on every render.
+  const aiMessages = useMemo(
+    () => (currentPaperId ? (chatHistories[currentPaperId] ?? []) : []),
+    [chatHistories, currentPaperId]
+  );
   const isStreaming = useEditorStore((s) => s.isAIStreaming);
   const addAIMessage = useEditorStore((s) => s.addAIMessage);
   const updateLastAIMessage = useEditorStore((s) => s.updateLastAIMessage);
   const setIsAIStreaming = useEditorStore((s) => s.setIsAIStreaming);
   const clearAIMessages = useEditorStore((s) => s.clearAIMessages);
   const reasoningEffort = useEditorStore((s) => s.reasoningEffort);
+  const promptHistory = useEditorStore((s) => s.promptHistory);
+  const promptHistoryIndex = useEditorStore((s) => s.promptHistoryIndex);
+  const addPromptToHistory = useEditorStore((s) => s.addPromptToHistory);
+  const setPromptHistoryIndex = useEditorStore((s) => s.setPromptHistoryIndex);
+  const resetPromptHistoryIndex = useEditorStore((s) => s.resetPromptHistoryIndex);
 
   const [input, setInput] = useState("");
+  const draftRef = useRef<string>("");
   const abortRef = useRef<AbortController | null>(null);
   const endRef = useRef<HTMLDivElement>(null);
 
@@ -121,7 +133,9 @@ function ChatTab({ editor }: { editor: Editor | null }) {
     };
     addAIMessage(assistantMessage);
 
+    addPromptToHistory(trimmed);
     setInput("");
+    draftRef.current = "";
     setIsAIStreaming(true);
 
     abortRef.current?.abort();
@@ -170,6 +184,7 @@ function ChatTab({ editor }: { editor: Editor | null }) {
     addAIMessage,
     updateLastAIMessage,
     setIsAIStreaming,
+    addPromptToHistory,
   ]);
 
   return (
@@ -288,11 +303,47 @@ function ChatTab({ editor }: { editor: Editor | null }) {
         <div className="relative">
           <textarea
             value={input}
-            onChange={(event) => setInput(event.target.value)}
+            onChange={(event) => {
+              setInput(event.target.value);
+              // Any direct typing resets history browsing
+              if (promptHistoryIndex !== -1) {
+                resetPromptHistoryIndex();
+              }
+            }}
             onKeyDown={(event) => {
               if (event.key === "Enter" && !event.shiftKey) {
                 event.preventDefault();
                 handleSend();
+                return;
+              }
+
+              if (event.key === "ArrowUp" && promptHistory.length > 0) {
+                event.preventDefault();
+                if (promptHistoryIndex === -1) {
+                  // Save current draft before browsing
+                  draftRef.current = input;
+                  setPromptHistoryIndex(0);
+                  setInput(promptHistory[0]);
+                } else if (promptHistoryIndex < promptHistory.length - 1) {
+                  const next = promptHistoryIndex + 1;
+                  setPromptHistoryIndex(next);
+                  setInput(promptHistory[next]);
+                }
+                return;
+              }
+
+              if (event.key === "ArrowDown" && promptHistoryIndex !== -1) {
+                event.preventDefault();
+                if (promptHistoryIndex > 0) {
+                  const prev = promptHistoryIndex - 1;
+                  setPromptHistoryIndex(prev);
+                  setInput(promptHistory[prev]);
+                } else {
+                  // Back to fresh input — restore draft
+                  resetPromptHistoryIndex();
+                  setInput(draftRef.current);
+                }
+                return;
               }
             }}
             placeholder="Ask about your paper..."
@@ -603,11 +654,18 @@ export function AIPanel({ editor }: AIPanelProps) {
     >
       {/* Panel header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-ink-100 bg-white shrink-0">
-        <div className="flex items-center gap-2">
-          <div className="h-5 w-5 rounded bg-brand-600 flex items-center justify-center">
+        <div className="flex items-center gap-2 min-w-0">
+          <div className="h-5 w-5 rounded bg-brand-600 flex items-center justify-center shrink-0">
             <MessageSquare className="h-3 w-3 text-white" />
           </div>
-          <span className="text-sm font-semibold text-ink-900">AI Assistant</span>
+          <div className="min-w-0">
+            <span className="text-sm font-semibold text-ink-900">AI Assistant</span>
+            {currentPaper && (
+              <p className="text-xs text-ink-400 truncate max-w-[180px]" title={currentPaper.title}>
+                {currentPaper.title || "Untitled"}
+              </p>
+            )}
+          </div>
         </div>
         <div className="flex items-center gap-0.5">
           {TABS.map(({ mode, label, Icon }) => (

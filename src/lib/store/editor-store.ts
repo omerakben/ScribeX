@@ -14,6 +14,10 @@ import {
   normalizeCitationStyleSelection,
 } from "@/lib/constants";
 import { STORAGE_KEYS, STORAGE_VERSION } from "@/lib/storage";
+import { djb2Hash } from "@/lib/utils/content-hash";
+import { structuredChatCompletion } from "@/lib/mercury/client";
+import { getTemperature } from "@/lib/constants/temperatures";
+import { interpolate, getRawGenerateNamePrompt } from "@/lib/prompts/loader";
 
 const normalizePaperCitationStyle = (paper: Paper): Paper => ({
   ...paper,
@@ -32,7 +36,10 @@ interface EditorState {
   // AI Panel
   aiPanelOpen: boolean;
   aiPanelMode: AIPanelMode;
-  aiMessages: AIMessage[];
+  /** Per-paper chat histories keyed by paper ID. */
+  chatHistories: Record<string, AIMessage[]>;
+  /** Computed getter — returns messages for the current paper. */
+  getCurrentMessages: () => AIMessage[];
   isAIStreaming: boolean;
 
   // Writing mode
@@ -54,10 +61,20 @@ interface EditorState {
   // Reasoning
   reasoningEffort: ReasoningEffort;
 
+  // Prompt history (persisted)
+  promptHistory: string[];
+
   // UI
   wordCount: number;
   isSaving: boolean;
   isExporting: boolean;
+  darkMode: boolean;
+
+  // Transient (not persisted)
+  contentHashes: Record<string, number>;
+  promptHistoryIndex: number;
+  /** Tracks which paper IDs have already been auto-named (transient, not persisted). */
+  autoNamedPapers: Record<string, boolean>;
 
   // Actions
   setCurrentPaper: (paper: Paper | null) => void;
@@ -68,6 +85,8 @@ interface EditorState {
   addAIMessage: (message: AIMessage) => void;
   updateLastAIMessage: (content: string, isStreaming?: boolean) => void;
   clearAIMessages: () => void;
+  /** Remove chat histories for papers that no longer exist (housekeeping). */
+  pruneOrphanedChatHistories: () => void;
   setIsAIStreaming: (streaming: boolean) => void;
   setActiveWritingMode: (mode: WritingMode | null) => void;
   setSelectedText: (text: string, range?: { from: number; to: number }) => void;
@@ -83,16 +102,22 @@ interface EditorState {
   setWordCount: (count: number) => void;
   setIsSaving: (saving: boolean) => void;
   setIsExporting: (exporting: boolean) => void;
+  toggleDarkMode: () => void;
+  addPromptToHistory: (prompt: string) => void;
+  setPromptHistoryIndex: (index: number) => void;
+  resetPromptHistoryIndex: () => void;
 
   // Persistence-aware actions
   savePaper: (id: string, updates: Partial<Omit<Paper, "id">>) => void;
   deletePaper: (id: string) => void;
   updatePaperContent: (id: string, content: string, wordCount: number) => void;
+  /** Updates the paper title and marks the paper as auto-named. */
+  autoNamePaper: (id: string, name: string) => void;
 }
 
 export const useEditorStore = create<EditorState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       // Document
       currentPaper: null,
       papers: [],
@@ -101,7 +126,11 @@ export const useEditorStore = create<EditorState>()(
       // AI Panel
       aiPanelOpen: true,
       aiPanelMode: "chat",
-      aiMessages: [],
+      chatHistories: {},
+      getCurrentMessages: () => {
+        const { chatHistories, currentPaper } = get();
+        return currentPaper ? (chatHistories[currentPaper.id] ?? []) : [];
+      },
       isAIStreaming: false,
 
       // Writing mode
@@ -127,6 +156,15 @@ export const useEditorStore = create<EditorState>()(
       wordCount: 0,
       isSaving: false,
       isExporting: false,
+      darkMode: false,
+
+      // Prompt history (persisted)
+      promptHistory: [],
+
+      // Transient (not persisted)
+      contentHashes: {},
+      promptHistoryIndex: -1,
+      autoNamedPapers: {},
 
       // Actions
       setCurrentPaper: (paper) =>
@@ -135,18 +173,42 @@ export const useEditorStore = create<EditorState>()(
       setIsDirty: (isDirty) => set({ isDirty }),
       toggleAIPanel: () => set((s) => ({ aiPanelOpen: !s.aiPanelOpen })),
       setAIPanelMode: (aiPanelMode) => set({ aiPanelMode }),
-      addAIMessage: (message) => set((s) => ({ aiMessages: [...s.aiMessages, message] })),
+      addAIMessage: (message) =>
+        set((s) => {
+          const paperId = s.currentPaper?.id;
+          if (!paperId) return {};
+          const existing = s.chatHistories[paperId] ?? [];
+          // Trim to max 100 messages per paper, removing oldest first
+          const next = [...existing, message].slice(-100);
+          return { chatHistories: { ...s.chatHistories, [paperId]: next } };
+        }),
       updateLastAIMessage: (content, isStreaming) =>
         set((s) => {
-          const msgs = [...s.aiMessages];
+          const paperId = s.currentPaper?.id;
+          if (!paperId) return {};
+          const msgs = [...(s.chatHistories[paperId] ?? [])];
           if (msgs.length > 0) {
             const updates: Partial<AIMessage> = { content };
             if (isStreaming !== undefined) updates.isStreaming = isStreaming;
             msgs[msgs.length - 1] = { ...msgs[msgs.length - 1], ...updates };
           }
-          return { aiMessages: msgs };
+          return { chatHistories: { ...s.chatHistories, [paperId]: msgs } };
         }),
-      clearAIMessages: () => set({ aiMessages: [] }),
+      clearAIMessages: () =>
+        set((s) => {
+          const paperId = s.currentPaper?.id;
+          if (!paperId) return {};
+          return { chatHistories: { ...s.chatHistories, [paperId]: [] } };
+        }),
+      pruneOrphanedChatHistories: () =>
+        set((s) => {
+          const paperIds = new Set(s.papers.map((p) => p.id));
+          const pruned: Record<string, AIMessage[]> = {};
+          for (const [id, msgs] of Object.entries(s.chatHistories)) {
+            if (paperIds.has(id)) pruned[id] = msgs;
+          }
+          return { chatHistories: pruned };
+        }),
       setIsAIStreaming: (isAIStreaming) => set({ isAIStreaming }),
       setActiveWritingMode: (activeWritingMode) => set({ activeWritingMode }),
       setSelectedText: (selectedText, selectionRange) =>
@@ -163,6 +225,18 @@ export const useEditorStore = create<EditorState>()(
       setWordCount: (wordCount) => set({ wordCount }),
       setIsSaving: (isSaving) => set({ isSaving }),
       setIsExporting: (isExporting) => set({ isExporting }),
+      toggleDarkMode: () => set((s) => ({ darkMode: !s.darkMode })),
+      addPromptToHistory: (prompt) =>
+        set((s) => {
+          const trimmed = prompt.trim();
+          if (!trimmed) return {};
+          // Deduplicate consecutive identical prompts
+          if (s.promptHistory[0] === trimmed) return {};
+          const next = [trimmed, ...s.promptHistory].slice(0, 50);
+          return { promptHistory: next, promptHistoryIndex: -1 };
+        }),
+      setPromptHistoryIndex: (promptHistoryIndex) => set({ promptHistoryIndex }),
+      resetPromptHistoryIndex: () => set({ promptHistoryIndex: -1 }),
 
       // Persistence-aware actions
       savePaper: (id, updates) =>
@@ -186,21 +260,86 @@ export const useEditorStore = create<EditorState>()(
           currentPaper: s.currentPaper?.id === id ? null : s.currentPaper,
         })),
 
-      updatePaperContent: (id, content, wordCount) =>
+      autoNamePaper: (id, name) =>
         set((s) => {
           const updatedAt = new Date().toISOString();
           return {
             papers: s.papers.map((p) =>
-              p.id === id ? { ...p, content, wordCount, updatedAt } : p
+              p.id === id ? { ...p, title: name, updatedAt } : p
             ),
             currentPaper:
               s.currentPaper?.id === id
-                ? { ...s.currentPaper, content, wordCount, updatedAt }
+                ? { ...s.currentPaper, title: name, updatedAt }
                 : s.currentPaper,
-            isDirty: false,
-            isSaving: false,
+            autoNamedPapers: { ...s.autoNamedPapers, [id]: true },
           };
         }),
+
+      updatePaperContent: (id, content, wordCount) => {
+        const s = get();
+        const newHash = djb2Hash(content);
+        if (s.contentHashes[id] === newHash) {
+          // Content unchanged — skip the save
+          set({ isSaving: false });
+          return;
+        }
+
+        const updatedAt = new Date().toISOString();
+        set({
+          papers: s.papers.map((p) =>
+            p.id === id ? { ...p, content, wordCount, updatedAt } : p
+          ),
+          currentPaper:
+            s.currentPaper?.id === id
+              ? { ...s.currentPaper, content, wordCount, updatedAt }
+              : s.currentPaper,
+          isDirty: false,
+          isSaving: false,
+          contentHashes: { ...s.contentHashes, [id]: newHash },
+        });
+
+        // Auto-naming: fire-and-forget for untitled papers with enough content
+        const paper = s.papers.find((p) => p.id === id);
+        const plainText = content.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+        const shouldAutoName =
+          plainText.length > 50 &&
+          paper?.title === "Untitled Paper" &&
+          !s.autoNamedPapers[id];
+
+        if (shouldAutoName) {
+          // Mark as named BEFORE the async call to prevent duplicate requests
+          set((prev) => ({
+            autoNamedPapers: { ...prev.autoNamedPapers, [id]: true },
+          }));
+
+          const excerpt = plainText.slice(0, 500);
+          // Embed the generate-name instructions in the user message so they
+          // override the default academic system prompt behavior.
+          const userMessage = interpolate(getRawGenerateNamePrompt(), { text: excerpt });
+
+          structuredChatCompletion<{ name: string }>(
+            [{ role: "user", content: userMessage }],
+            {
+              type: "object",
+              properties: { name: { type: "string" } },
+              required: ["name"],
+            },
+            {
+              maxTokens: 64,
+              temperature: getTemperature("generate_name"),
+            }
+          )
+            .then((result) => {
+              const name = result?.name?.trim();
+              if (name && name.length > 0) {
+                get().autoNamePaper(id, name);
+              }
+            })
+            .catch(() => {
+              // Silently fail — auto-naming is non-critical
+            });
+        }
+      },
     }),
     {
       name: STORAGE_KEYS.editor,
@@ -211,8 +350,23 @@ export const useEditorStore = create<EditorState>()(
         autocompleteEnabled: state.autocompleteEnabled,
         diffusionEnabled: state.diffusionEnabled,
         reasoningEffort: state.reasoningEffort,
+        promptHistory: state.promptHistory,
+        darkMode: state.darkMode,
+        chatHistories: state.chatHistories,
       }),
-      migrate: (persisted) => persisted as Record<string, unknown>,
+      migrate: (persisted) => {
+        const data = persisted as Record<string, unknown>;
+        // Migrate legacy flat aiMessages → chatHistories
+        // We can't know the paper ID at migration time, so we drop the old messages
+        // (they would be associated with the wrong paper anyway).
+        if ("aiMessages" in data) {
+          delete data["aiMessages"];
+          if (!data["chatHistories"]) {
+            data["chatHistories"] = {};
+          }
+        }
+        return data;
+      },
     }
   )
 );

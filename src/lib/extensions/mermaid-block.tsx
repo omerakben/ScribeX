@@ -116,7 +116,7 @@ export const MermaidBlock = Node.create({
   },
 
   renderHTML({ HTMLAttributes }: { HTMLAttributes: Record<string, unknown> }) {
-    return ["div", mergeAttributes(HTMLAttributes, { "data-type": "mermaid-block" }), 0];
+    return ["div", mergeAttributes(HTMLAttributes, { "data-type": "mermaid-block" })];
   },
 
   addNodeView() {

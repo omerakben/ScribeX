@@ -35,6 +35,7 @@ import { useEditorStore } from "@/lib/store/editor-store";
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select";
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
 import { ExportDialog } from "@/components/export/export-dialog";
+import { DarkModeToggle } from "@/components/editor/dark-mode-toggle";
 import type { ReasoningEffort } from "@/lib/types";
 import type { Editor } from "@tiptap/react";
 
@@ -276,6 +277,8 @@ export function EditorToolbar({ editor, onSave }: EditorToolbarProps) {
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
+
+          <DarkModeToggle />
 
           <button
             type="button"
