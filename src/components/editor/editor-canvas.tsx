@@ -24,6 +24,8 @@ import Underline from "@tiptap/extension-underline";
 import Superscript from "@tiptap/extension-superscript";
 import Subscript from "@tiptap/extension-subscript";
 import { applyEdit, streamChatCompletion } from "@/lib/mercury/client";
+import { routePrompt } from "@/lib/prompts/router";
+import { getCommandPrompt } from "@/lib/prompts";
 import { markdownToHtml } from "@/lib/utils/markdown-to-html";
 import { GhostText } from "@/lib/extensions/ghost-text";
 import { MermaidBlock } from "@/lib/extensions/mermaid-block";
@@ -167,24 +169,15 @@ export function EditorCanvas({ onEditorReady }: EditorCanvasProps) {
           setIsAIStreaming(true);
           const reasoningEffort = state.reasoningEffort;
 
-          const prompts: Record<string, string> = {
-            generate:
-              "Generate the next section in an academic tone while maintaining manuscript consistency.",
-            expand:
-              "Expand the current section with richer detail, references, and methodological precision.",
-            outline:
-              "Generate an outline for the next section with clear subsection suggestions.",
-            counter:
-              "Produce a rigorous counter-argument to the current thesis section.",
-            evidence:
-              "Surface supporting evidence suggestions for the current claims.",
-            transition:
-              "Write a transition that links the current section to the next one naturally.",
-            abstract:
-              "Draft a concise, publication-ready abstract based on the manuscript.",
-            diffuse:
-              "Generate the next section in an academic tone while maintaining manuscript consistency.",
-          };
+          // Route through prompt system (handles truncation + selection markers)
+          const routed = routePrompt({
+            action: command.action,
+            selectedText: "",
+            documentText: content,
+            selectionStart: from,
+            selectionEnd: from,
+          });
+          const userPrompt = routed?.prompt ?? getCommandPrompt(command.action, { context: content }) ?? content;
 
           if (useDiffusion) {
             // Diffusion mode: text denoises from noise → clarity via replacement semantics
@@ -195,12 +188,7 @@ export function EditorCanvas({ onEditorReady }: EditorCanvasProps) {
             let finalText = "";
 
             await streamChatCompletion(
-              [
-                {
-                  role: "user",
-                  content: `${prompts[command.action]}\n\nCurrent manuscript context:\n${content}`,
-                },
-              ],
+              [{ role: "user", content: userPrompt }],
               {
                 reasoningEffort,
                 diffusing: true,
@@ -239,12 +227,7 @@ export function EditorCanvas({ onEditorReady }: EditorCanvasProps) {
             });
 
             await streamChatCompletion(
-              [
-                {
-                  role: "user",
-                  content: `${prompts[command.action]}\n\nCurrent manuscript context:\n${content}`,
-                },
-              ],
+              [{ role: "user", content: userPrompt }],
               {
                 reasoningEffort,
                 onChunk: (text) => {
@@ -290,10 +273,8 @@ export function EditorCanvas({ onEditorReady }: EditorCanvasProps) {
           setActiveWritingMode("quick-edit");
           setIsAIStreaming(true);
 
-          const instruction =
-            command.action === "simplify"
-              ? "Simplify this passage while preserving argument quality and factual meaning."
-              : "Rewrite this passage in formal academic register while preserving intent and claims.";
+          // Get instruction from prompt system (falls back to raw prompt if no vars needed)
+          const instruction = getCommandPrompt(command.action) ?? target;
 
           try {
             const result = await applyEdit(target, instruction);
@@ -341,13 +322,18 @@ export function EditorCanvas({ onEditorReady }: EditorCanvasProps) {
           const fullContext = editor.getText();
           const rwEffort = useEditorStore.getState().reasoningEffort ?? "high";
 
+          // Route through prompt system (handles truncation + selection markers)
+          const rwRouted = routePrompt({
+            action: "rewrite",
+            selectedText: rwTarget,
+            documentText: fullContext,
+            selectionStart: rwRange.from,
+            selectionEnd: rwRange.to,
+          });
+          const rwPrompt = rwRouted?.prompt ?? getCommandPrompt("rewrite", { context: rwTarget }) ?? rwTarget;
+
           await streamChatCompletion(
-            [
-              {
-                role: "user",
-                content: `You are performing a deep rewrite. Substantially restructure and improve the following passage while preserving its core argument and evidence. Elevate clarity, flow, and academic rigor. Do NOT add new claims or citations.\n\nFull manuscript context (for consistency):\n${fullContext}\n\n---\nPassage to rewrite:\n${rwTarget}\n\nReturn ONLY the rewritten passage, no preamble.`,
-              },
-            ],
+            [{ role: "user", content: rwPrompt }],
             {
               reasoningEffort: rwEffort === "instant" || rwEffort === "low" ? "high" : rwEffort,
               onChunk: (text) => {

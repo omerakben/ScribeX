@@ -1,4 +1,4 @@
-import { ACADEMIC_SYSTEM_PROMPT } from "@/lib/constants";
+import { getSystemPrompt } from "@/lib/prompts";
 import type { MercuryModel, MercuryMessage, ReasoningEffort, WritingMode } from "@/lib/types";
 
 function getJoinToken(): string {
@@ -56,7 +56,7 @@ export async function streamChatCompletion(
         endpoint: "chat",
         model: "mercury-2",
         messages: [
-          { role: "system", content: ACADEMIC_SYSTEM_PROMPT },
+          { role: "system", content: getSystemPrompt() },
           ...messages,
         ],
         max_tokens: options.maxTokens ?? 4096,
@@ -140,7 +140,7 @@ export async function structuredChatCompletion<T>(
       endpoint: "chat",
       model: "mercury-2",
       messages: [
-        { role: "system", content: ACADEMIC_SYSTEM_PROMPT },
+        { role: "system", content: getSystemPrompt() },
         ...messages,
       ],
       max_tokens: options?.maxTokens ?? 4096,

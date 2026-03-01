@@ -15,6 +15,7 @@ import {
 import { cn } from "@/lib/utils/cn";
 import { markdownToHtml } from "@/lib/utils/markdown-to-html";
 import { streamChatCompletion, structuredChatCompletion } from "@/lib/mercury/client";
+import { CHAT_SYSTEM_PROMPT } from "@/lib/prompts/assistant/chat";
 import { useEditorStore } from "@/lib/store/editor-store";
 import {
   getCitationEntityId,
@@ -137,7 +138,7 @@ function ChatTab({ editor }: { editor: Editor | null }) {
       {
         role: "user" as const,
         content: editorContent
-          ? `[Manuscript context]\n${editorContent}\n\n[Prompt]\n${trimmed}`
+          ? CHAT_SYSTEM_PROMPT.replace("{{context}}", `[Current manuscript]\n${editorContent}`) + `\n\n[Prompt]\n${trimmed}`
           : trimmed,
       },
     ];
