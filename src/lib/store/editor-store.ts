@@ -44,12 +44,8 @@ interface EditorState {
 
   // Writing mode
   activeWritingMode: WritingMode | null;
-  selectedText: string;
-  selectionRange: { from: number; to: number } | null;
 
   // Autocomplete
-  ghostText: string;
-  showGhostText: boolean;
   autocompleteEnabled: boolean;
 
   // Diffusion
@@ -89,9 +85,6 @@ interface EditorState {
   pruneOrphanedChatHistories: () => void;
   setIsAIStreaming: (streaming: boolean) => void;
   setActiveWritingMode: (mode: WritingMode | null) => void;
-  setSelectedText: (text: string, range?: { from: number; to: number }) => void;
-  setGhostText: (text: string) => void;
-  setShowGhostText: (show: boolean) => void;
   setAutocompleteEnabled: (enabled: boolean) => void;
   setIsDiffusing: (diffusing: boolean) => void;
   setDiffusionStep: (step: number) => void;
@@ -135,12 +128,8 @@ export const useEditorStore = create<EditorState>()(
 
       // Writing mode
       activeWritingMode: null,
-      selectedText: "",
-      selectionRange: null,
 
       // Autocomplete
-      ghostText: "",
-      showGhostText: false,
       autocompleteEnabled: true,
 
       // Diffusion
@@ -211,10 +200,6 @@ export const useEditorStore = create<EditorState>()(
         }),
       setIsAIStreaming: (isAIStreaming) => set({ isAIStreaming }),
       setActiveWritingMode: (activeWritingMode) => set({ activeWritingMode }),
-      setSelectedText: (selectedText, selectionRange) =>
-        set({ selectedText, selectionRange: selectionRange ?? null }),
-      setGhostText: (ghostText) => set({ ghostText }),
-      setShowGhostText: (showGhostText) => set({ showGhostText }),
       setAutocompleteEnabled: (autocompleteEnabled) => set({ autocompleteEnabled }),
       setIsDiffusing: (isDiffusing) => set({ isDiffusing }),
       setDiffusionStep: (diffusionStep) => set({ diffusionStep }),

@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
+import { validateJoinCode } from "@/lib/utils/api-auth";
 
 const SEMANTIC_SCHOLAR_BASE = "https://api.semanticscholar.org/graph/v1";
 const API_KEY = process.env.SEMANTIC_SCHOLAR_API_KEY;
-const JOIN_CODE = process.env.NEXT_PUBLIC_JOIN_CODE?.trim();
 const CITATION_PROVIDER = "semantic-scholar" as const;
 
 function pickExternalId(paper: Record<string, unknown>): string {
@@ -25,13 +25,8 @@ function pickExternalId(paper: Record<string, unknown>): string {
 }
 
 export async function GET(req: NextRequest) {
-  // A) Join code auth
-  if (JOIN_CODE) {
-    const token = req.headers.get("x-join-token")?.trim();
-    if (!token || token.toLowerCase() !== JOIN_CODE.toLowerCase()) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-  }
+  const authError = validateJoinCode(req);
+  if (authError) return authError;
 
   const { searchParams } = new URL(req.url);
   const query = searchParams.get("q");

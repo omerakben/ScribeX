@@ -12,13 +12,13 @@ This document describes the runtime architecture implemented in the current Scri
 - **Mercury wrapper**: client-side request adapters (`src/lib/mercury/client.ts`)
 - **Mercury proxy route**: server-side endpoint fanout (`src/app/api/mercury/route.ts`)
 - **Citation route**: Semantic Scholar integration (`src/app/api/citations/route.ts`)
-- **Middleware**: CSRF protection and rate limiting (`src/middleware.ts`)
+- **Middleware**: CSRF protection and rate limiting (`src/proxy.ts`)
 - **Export pipeline**: 6-format document export system (`src/lib/export/*`)
-- **Custom extensions**: Ghost text autocomplete, Mermaid diagrams, keyboard shortcuts, floating menu plugin (`src/lib/extensions/*`)
+- **Custom extensions**: Ghost text autocomplete, Mermaid diagrams, keyboard shortcuts (`src/lib/extensions/*`)
 - **Prompt system**: 37 TypeScript prompt files with loader and router (`src/lib/prompts/`)
 - **Humanizer module**: Few-shot pipeline with 456-entry dataset (`src/lib/humanizer/`)
 - **AI detection**: Heuristic text analysis (`src/lib/detection/`)
-- **Floating menu system**: Selection-triggered AI actions (`src/components/editor/floating-menu.tsx`, `floating-ribbon.tsx`)
+- **Floating menu system**: Selection-triggered AI actions with self-contained positioning (`src/components/editor/floating-menu.tsx`, `floating-ribbon.tsx`)
 - **Temperature engineering**: 22-action temperature map across 5 tiers (`src/lib/constants/temperatures.ts`)
 
 ## 2. End-to-End Data Flow
@@ -93,7 +93,7 @@ flowchart LR
 | BibTeX | `bibtex.ts` | Entry type detection, author formatting, double-braced titles |
 | LaTeX | `latex.ts` | HTML-to-LaTeX via DOMParser, 12-package preamble, math passthrough |
 
-All HTML content is sanitized via `sanitize.ts` before export (strips scripts, iframes, event handlers, javascript: URLs).
+All HTML content is sanitized via `src/lib/utils/sanitize-html.ts` before export (5-stage pipeline: script/style removal, dangerous block removal, tag allowlist filtering, event handler stripping, attribute sanitization).
 
 ### 3.5 Floating menu flow
 
@@ -182,7 +182,7 @@ Prompt history:
 
 ## 5. Security Boundaries
 
-### 5.1 Middleware (`src/middleware.ts`)
+### 5.1 Proxy Middleware (`src/proxy.ts`)
 
 Applied to all `/api/*` routes via `config.matcher`:
 
@@ -202,13 +202,13 @@ Applied to all `/api/*` routes via `config.matcher`:
 - If present, route sets `x-api-key` server-side.
 - If absent, route still works with unauthenticated request behavior and default rate limits.
 
-### 5.4 Export sanitization
+### 5.4 HTML sanitization
 
-- `src/lib/export/sanitize.ts` strips `<script>`, `<iframe>`, `<object>/<embed>/<form>`, event handlers, and `javascript:` URLs from content before export.
+- `src/lib/utils/sanitize-html.ts` provides a 5-stage pipeline applied in `markdown-to-html.ts` and before export: script/style removal, dangerous block removal, tag allowlist filtering, event handler stripping, and attribute sanitization. SSR-compatible.
 
-### 5.5 HTML sanitization
+### 5.5 API route authentication
 
-- `src/lib/utils/sanitize-html.ts` provides a 5-stage pipeline applied in `markdown-to-html.ts`: script/style removal, dangerous block removal, tag allowlist filtering, event handler stripping, and attribute sanitization. SSR-compatible.
+- `src/lib/utils/api-auth.ts` provides `validateJoinCode()` — shared join-code validation used by all 4 API routes. Uses constant-time comparison (`crypto.timingSafeEqual`) to prevent timing side-channel attacks.
 
 ## 6. Custom TipTap Extensions
 
@@ -243,14 +243,6 @@ Applied to all `/api/*` routes via `config.matcher`:
   - `Cmd/Ctrl+Shift+Y` — Stylize selection
   - `Cmd/Ctrl+Shift+D` — Detect AI
 - Dispatches `CustomEvent('scribex:shortcut', { detail: { action } })` for decoupled communication with the floating menu.
-
-### Floating Menu Plugin (`src/lib/extensions/floating-menu-plugin.ts`)
-
-- ProseMirror plugin for text selection detection.
-- 3-path state machine (explicit meta, collapsed selection, passthrough).
-- `calcPosition()` with viewport edge flip logic.
-- 300ms debounce, Escape dismiss, mousedown-outside dismiss.
-- Exports `FloatingMenuPlugin`, `floatingMenuPluginKey`, `getFloatingMenuState()`.
 
 ## 7. Dark Mode
 
@@ -322,6 +314,6 @@ Test helpers (`e2e/helpers.ts`) use `page.addInitScript` to seed localStorage wi
 - `src/lib/extensions/ghost-text.ts`
 - `src/lib/extensions/mermaid-block.tsx`
 - `src/lib/extensions/keyboard-shortcuts.ts`
-- `src/lib/extensions/floating-menu-plugin.ts`
+- `src/lib/utils/api-auth.ts`
 - `src/hooks/use-hydration.ts`
-- `src/middleware.ts`
+- `src/proxy.ts`

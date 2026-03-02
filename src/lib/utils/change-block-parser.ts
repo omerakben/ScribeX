@@ -135,21 +135,3 @@ export function hasChangeBlocks(text: string): boolean {
   return false;
 }
 
-/**
- * Count the number of syntactically valid ```change blocks in the text.
- * Blocks with an empty or missing `find` field are excluded from the count.
- */
-export function countChangeBlocks(text: string): number {
-  if (!text) return 0;
-
-  CHANGE_BLOCK_REGEX.lastIndex = 0;
-
-  let count = 0;
-  let match: RegExpExecArray | null;
-
-  while ((match = CHANGE_BLOCK_REGEX.exec(text)) !== null) {
-    if (parseBlockContent(match[1]) !== null) count++;
-  }
-
-  return count;
-}

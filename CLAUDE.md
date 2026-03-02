@@ -42,9 +42,11 @@ Test helpers (`e2e/helpers.ts`): `seedJoinToken()` and `seedPaper()` use `page.a
 - `POST /api/mercury` — Proxy to Inception Labs Mercury API. Accepts `{ endpoint, ...payload }` where endpoint is `chat|apply|fim|edit`. Handles both streaming (SSE passthrough) and non-streaming responses.
 - `GET /api/citations?q=&limit=&offset=` — Proxy to Semantic Scholar `/graph/v1/paper/search`. Transforms response to internal `Citation` format.
 - `POST /api/humanize` — Humanizer pipeline. Accepts `{ text, context?, count?, existing?, action: 'generate'|'generate_one', temperature? }`. Assembles few-shot messages from dataset server-side, calls Mercury-2. Returns `{alternatives: string[]}` or `{alternative: string}`.
-- `POST /api/detect` — AI detection. Accepts `{ text }`. Returns `{score, label: 'human'|'mixed'|'ai', sentences: [{text, score}]}`. Currently uses heuristic analysis (TODO: swap for Pangram/GPTZero).
+- `POST /api/detect` — AI detection via Pangram v3 API. Accepts `{ text }`. Returns `{score, label, sentences, fractionAi, fractionAiAssisted, fractionHuman, windows, dashboardLink}`. When `PANGRAM_API_KEY` is set, calls `https://text.api.pangram.com/v3` for 3-way classification (AI / AI-Assisted / Human) with per-segment windows and a public dashboard link. Falls back to heuristic analysis (`src/lib/detection/heuristics.ts`) when no API key is configured.
 
-### Middleware (`src/middleware.ts`)
+All API routes that require join-code authentication use the shared `validateJoinCode()` helper from `src/lib/utils/api-auth.ts`, which performs constant-time comparison to prevent timing side-channel attacks.
+
+### Proxy Middleware (`src/proxy.ts`)
 
 Applied to all `/api/*` routes. Two checks:
 1. **CSRF**: Compares `Origin` header against `NEXT_PUBLIC_APP_URL`. Cross-origin → 403.
@@ -83,7 +85,6 @@ Storage keys: `scribex:editor` and `scribex:dashboard` (defined in `src/lib/stor
 
 - **`ghost-text.ts`** — ProseMirror plugin for FIM autocomplete. Word-by-word acceptance (Tab = next word, Cmd/Ctrl+Enter = accept all). Multi-alternative caching (up to 5 per cursor position, Arrow Up/Down to cycle, temperature ramp 0.0–0.4). Background pre-fetch of alternative[1]. Jaccard similarity dedup (0.8 threshold). Visual "1/3" badge. Smart spacing via `normalizeSpacing()`.
 - **`mermaid-block.tsx`** — Atom node with React NodeView. Edit/render toggle, dynamic `import("mermaid")`, `securityLevel: "strict"`.
-- **`floating-menu-plugin.ts`** — ProseMirror plugin for text selection detection. 300ms debounce, viewport edge flip, dismiss on Escape/mousedown-outside. Exports `FloatingMenuPlugin`, `floatingMenuPluginKey`, `getFloatingMenuState()`, `FloatingMenuPluginState` interface.
 - **`keyboard-shortcuts.ts`** — TipTap Extension with 5 AI action bindings: `Mod-Shift-R` (rewrite), `Mod-Shift-H` (humanize), `Mod-Shift-F` (fix), `Mod-Shift-Y` (stylize), `Mod-Shift-D` (detect). Dispatches `CustomEvent('scribex:shortcut', { detail: { action } })` for decoupled communication with floating menu.
 
 **Critical: Math delimiter convention** — `@tiptap/extension-mathematics` uses non-standard delimiters: `$$...$$` for inline, `$$$...$$$` for block (NOT standard LaTeX `$`/`$$`). For programmatic insertion use `insertInlineMath({ latex })` / `insertBlockMath({ latex })` commands — never `insertContent('$...$')` (input rules only fire on keystrokes). The `markdown-to-html.ts` utility preserves these conventions when converting Mercury API output.
@@ -92,7 +93,7 @@ Storage keys: `scribex:editor` and `scribex:dashboard` (defined in `src/lib/stor
 
 Selection-triggered AI actions with two tiers:
 
-- **`floating-menu.tsx`** — 10-button fan-out (Rewrite, Simplify, Academic, Expand, Stylize, Humanize, Fix, Detect, Custom, Tone) from a sparkle trigger icon. Framer Motion spring animations, self-contained viewport positioning. Listens for `scribex:shortcut` CustomEvents from keyboard shortcuts. Pulse animation during processing (Phase 9).
+- **`floating-menu.tsx`** — 10-button fan-out (Rewrite, Simplify, Academic, Expand, Stylize, Humanize, Fix, Detect, Custom, Tone) from a sparkle trigger icon. Framer Motion spring animations. Handles its own positioning via TipTap `selectionUpdate`/`update` events (self-contained, no separate ProseMirror plugin). Listens for `scribex:shortcut` CustomEvents from keyboard shortcuts. Pulse animation during processing (Phase 9).
 - **`floating-ribbon.tsx`** — Tier-2 expansion panel with 7 modes: rewrite (synonym prompts with short/long routing), stylize (8 style chips via `structuredChatCompletion`), fix (`applyEdit` with before/after diff), custom (textarea input → 3 options), tone (`ToneAnalysisCard`), humanize (`HumanizerPanel`), detect (`AIDetectionBadge`). All with `AbortController` cancellation. Toast notifications on completion.
 - **`change-diff-card.tsx`** — Visual diff card with red strikethrough (old) / green (new), Apply/Decline buttons. Apply uses ProseMirror `doc.descendants()` to find exact text position, then `deleteRange().insertContentAt()`.
 - **`tone-analysis-card.tsx`** — Self-contained card: idle/analyzing/done/error states. Formality/sentiment color-coded badges, confidence progress bar, collapsible suggestions.
@@ -132,9 +133,9 @@ Few-shot learning pipeline that transforms AI-generated text into human-sounding
 
 ### AI Detection System (`src/lib/detection/`, Phase 2)
 
-- **`heuristics.ts`** — Self-contained text analyzer: type-token ratio, passive voice frequency, transition word density, sentence-length burstiness. Per-sentence + weighted global scoring. TODO for real provider swap (Pangram/GPTZero).
+- **`heuristics.ts`** — Self-contained text analyzer (fallback when `PANGRAM_API_KEY` is not set): type-token ratio, passive voice frequency, transition word density, sentence-length burstiness. Per-sentence + weighted global scoring.
 - **`client.ts`** — Thin `detectAI(text, signal?)` fetch wrapper for `/api/detect`.
-- **`ai-detection-badge.tsx`** — Self-contained badge component. States: idle/scanning/error/done. Color thresholds: <30% green/human, 30-60% amber/mixed, >60% red/ai. Expandable sentence-level breakdown.
+- **`ai-detection-badge.tsx`** — Self-contained badge component. States: idle/scanning/error/done. Color thresholds: <30% green/human, 30-60% amber/mixed, >60% red/ai. When Pangram data is present: 3-way stacked bar (AI/AI-Assisted/Human), per-segment window breakdown with labels and confidence, "View on Pangram" dashboard link, "Powered by Pangram" disclaimer. Falls back to single score bar for heuristic results.
 
 ### Export System (`src/lib/export/`)
 
@@ -174,7 +175,7 @@ Shortcuts dispatch `CustomEvent('scribex:shortcut')` → floating menu listens a
 
 - **Tailwind CSS v4** with `@theme` directive in `globals.css` defining three color scales: `brand-*` (editorial navy, oklch hue 252), `mercury-*` (cool teal, hue 195), `ink-*` (warm stone neutral, hue 72). Plus semantic colors, surface tokens, and custom shadows. Dark mode overrides via `.dark` class.
 - **Fonts**: Manrope (sans/UI), Newsreader (serif/editor body), IBM Plex Mono (mono/code)
-- **UI components**: shadcn/ui pattern in `src/components/ui/` with barrel export via `index.ts`. Built on Radix primitives + CVA.
+- **UI components**: shadcn/ui pattern in `src/components/ui/`. Built on Radix primitives + CVA. Consumers import directly from individual component files (no barrel export).
 - **Animations**: Framer Motion for page transitions; CSS keyframes for `fade-in`, `slide-up`, `scale-in`, `pulse-glow`, `diffuse`, `shimmer`.
 
 ### Key Types (`src/lib/types/index.ts`)
@@ -190,6 +191,7 @@ Central type definitions: `Paper`, `WritingMode`, `MercuryModel`, `Citation`, `A
 ```
 INCEPTION_API_KEY          # Required — Mercury API key (server-side only)
 SEMANTIC_SCHOLAR_API_KEY   # Optional — increases Semantic Scholar rate limits
+PANGRAM_API_KEY            # Optional — Pangram v3 AI detection (falls back to heuristics without key)
 NEXT_PUBLIC_APP_URL        # App URL (default: http://localhost:3000)
 NEXT_PUBLIC_JOIN_CODE      # Access gate code (if empty, gate is bypassed)
 ```

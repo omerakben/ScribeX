@@ -48,7 +48,6 @@ export function EditorCanvas({ onEditorReady }: EditorCanvasProps) {
   const currentPaper = useEditorStore((s) => s.currentPaper);
   const setIsDirty = useEditorStore((s) => s.setIsDirty);
   const setWordCount = useEditorStore((s) => s.setWordCount);
-  const setSelectedText = useEditorStore((s) => s.setSelectedText);
   const autocompleteEnabled = useEditorStore((s) => s.autocompleteEnabled);
   const setActiveWritingMode = useEditorStore((s) => s.setActiveWritingMode);
   const setIsAIStreaming = useEditorStore((s) => s.setIsAIStreaming);
@@ -105,15 +104,6 @@ export function EditorCanvas({ onEditorReady }: EditorCanvasProps) {
       if (!contentReadyRef.current) return;
       setIsDirty(true);
       setWordCount(editor.storage.characterCount.words());
-    },
-    onSelectionUpdate: ({ editor }) => {
-      const { from, to } = editor.state.selection;
-      if (from !== to) {
-        const text = editor.state.doc.textBetween(from, to, " ");
-        setSelectedText(text, { from, to });
-      } else {
-        setSelectedText("");
-      }
     },
   });
 

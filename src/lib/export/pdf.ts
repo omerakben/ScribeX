@@ -1,6 +1,6 @@
 import type { Paper, Citation } from "@/lib/types";
 import type { ExportOptions, ExportResult } from "@/lib/types/export";
-import { sanitizeHtml } from "./sanitize";
+import { sanitizeHtml } from "@/lib/utils/sanitize-html";
 
 // ─── Citation Formatter ───────────────────────────────────────
 
@@ -344,6 +344,7 @@ export async function exportPDF(
           backgroundColor: "#ffffff",
           // Strip unsupported color functions from the cloned document
           // before html2canvas attempts to parse them.
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
           onclone: (_doc: Document, _el: HTMLElement) => {
             sanitizeClonedStyles(_doc);
           },

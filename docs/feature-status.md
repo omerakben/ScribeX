@@ -55,8 +55,8 @@ This status is based on current implementation in the repository, not aspiration
 | Math (KaTeX) support | Implemented | `@tiptap/extension-mathematics` with `$$`/`$$$` delimiters |
 | Mermaid diagram support | Implemented | `src/lib/extensions/mermaid-block.tsx` custom TipTap node |
 | Superscript / Subscript | Implemented | `@tiptap/extension-superscript` + `@tiptap/extension-subscript` |
-| CSRF protection | Implemented | `src/middleware.ts` origin validation |
-| Rate limiting | Implemented | `src/middleware.ts` sliding window, 60 req/min per IP |
+| CSRF protection | Implemented | `src/proxy.ts` origin validation |
+| Rate limiting | Implemented | `src/proxy.ts` sliding window, 60 req/min per IP |
 | Paper templates (7 templates) | Implemented | `PAPER_TEMPLATES` in constants |
 | E2E test suite | Implemented | 10 Playwright specs in `e2e/` |
 

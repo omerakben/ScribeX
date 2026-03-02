@@ -9,8 +9,8 @@
  * Pattern: <<<SELECTED>>>text<<<END_SELECTED>>>
  */
 
-export const SELECTION_START_MARKER = "<<<SELECTED>>>";
-export const SELECTION_END_MARKER = "<<<END_SELECTED>>>";
+const SELECTION_START_MARKER = "<<<SELECTED>>>";
+const SELECTION_END_MARKER = "<<<END_SELECTED>>>";
 
 /**
  * Returns true when the selected text appears more than once in the document,
@@ -80,22 +80,6 @@ export function wrapSelection(
   return `${before}${SELECTION_START_MARKER}${selected}${SELECTION_END_MARKER}${after}`;
 }
 
-/**
- * Strips disambiguation markers from an AI response before applying it back
- * to the document. Also un-escapes any marker sequences that were escaped
- * by wrapSelection.
- */
-export function unwrapSelection(text: string): string {
-  // Remove markers
-  let result = text
-    .replaceAll(SELECTION_START_MARKER, "")
-    .replaceAll(SELECTION_END_MARKER, "");
-
-  // Restore escaped marker sequences
-  result = unescapeMarkers(result);
-
-  return result;
-}
 
 // ---------------------------------------------------------------------------
 // Internal helpers
@@ -105,7 +89,7 @@ export function unwrapSelection(text: string): string {
  * Escapes marker-like strings in the document so the AI won't confuse them
  * with the real selection delimiters.
  * Encoding: replace `<<<` with `\u2039\u2039\u2039` (single-angle quotation
- * mark, visually similar, safe round-trip via unescapeMarkers).
+ * mark, visually similar).
  */
 function escapeExistingMarkers(text: string): string {
   return text
@@ -113,8 +97,3 @@ function escapeExistingMarkers(text: string): string {
     .replaceAll(SELECTION_END_MARKER, "\u2039\u2039\u2039END_SELECTED\u203a\u203a\u203a");
 }
 
-function unescapeMarkers(text: string): string {
-  return text
-    .replaceAll("\u2039\u2039\u2039SELECTED\u203a\u203a\u203a", SELECTION_START_MARKER)
-    .replaceAll("\u2039\u2039\u2039END_SELECTED\u203a\u203a\u203a", SELECTION_END_MARKER);
-}

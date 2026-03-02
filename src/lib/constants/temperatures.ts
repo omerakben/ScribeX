@@ -64,6 +64,6 @@ export const ACTION_TEMPERATURES: Record<TemperatureAction, number> = {
   autocomplete: 0.0,
 };
 
-export function getTemperature(action: string, fallback = 0.6): number {
-  return ACTION_TEMPERATURES[action as TemperatureAction] ?? fallback;
+export function getTemperature(action: TemperatureAction, fallback = 0.6): number {
+  return ACTION_TEMPERATURES[action] ?? fallback;
 }

@@ -10,11 +10,8 @@
  *
  * Scores are 0–1 where 1 = highly likely AI-generated.
  *
- * TODO: Swap this module for a real provider (Pangram, GPTZero, Sapling, etc.):
- *   1. Add provider API key to .env (e.g. PANGRAM_API_KEY)
- *   2. Replace `analyzeText()` body with a fetch to the provider's endpoint
- *   3. Map the provider's per-sentence data to DetectionSentence[]
- *   4. Keep the same DetectionResponse shape — badge component needs no changes
+ * This module serves as the fallback when PANGRAM_API_KEY is not configured.
+ * The primary detection path uses the Pangram v3 API (see src/app/api/detect/route.ts).
  */
 
 import type { DetectionResponse, DetectionSentence } from "@/lib/types";
@@ -38,13 +35,11 @@ function typeTokenRatio(tokens: string[]): number {
 // ─── Passive voice ─────────────────────────────────────────────────────────────
 
 const PASSIVE_PATTERN =
-  /\b(is|are|was|were|be|been|being)\s+(\w+ed|written|shown|known|found|given|made|done|taken|seen|used|based|considered|noted|provided|described|indicated|demonstrated|suggested|observed|reported|identified|analyzed|examined|studied|investigated|discussed|presented|proposed|conducted|performed|implemented|developed|designed|evaluated|assessed|measured|calculated|estimated|tested|verified|validated|compared)\b/gi;
+  /\b(is|are|was|were|be|been|being)\s+(\w+ed|written|shown|known|found|given|made|done|taken|seen|used|based|considered|noted|provided|described|indicated|demonstrated|suggested|observed|reported|identified|analyzed|examined|studied|investigated|discussed|presented|proposed|conducted|performed|implemented|developed|designed|evaluated|assessed|measured|calculated|estimated|tested|verified|validated|compared)\b/i;
 
 function passiveVoiceRatio(sentences: string[]): number {
   if (sentences.length === 0) return 0;
   const passiveCount = sentences.filter((s) => PASSIVE_PATTERN.test(s)).length;
-  // Reset lastIndex for global regex reuse
-  PASSIVE_PATTERN.lastIndex = 0;
   return passiveCount / sentences.length;
 }
 
@@ -109,7 +104,6 @@ function scoreSentence(sentence: string): number {
 
   const ttr = typeTokenRatio(tokens);
   const passive = PASSIVE_PATTERN.test(sentence) ? 1 : 0;
-  PASSIVE_PATTERN.lastIndex = 0;
 
   const transitionHit = tokens.some((t) => TRANSITION_WORDS.has(t)) ? 1 : 0;
   const lenScore = Math.min(tokens.length / 30, 1);

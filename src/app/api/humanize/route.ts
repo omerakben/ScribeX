@@ -5,20 +5,15 @@ import {
   parseAlternatives,
   parseSingleAlternative,
 } from "@/lib/humanizer";
+import { validateJoinCode } from "@/lib/utils/api-auth";
+import { MERCURY_API_BASE } from "@/lib/constants";
 
-const MERCURY_API_BASE = "https://api.inceptionlabs.ai/v1";
 const API_KEY = process.env.INCEPTION_API_KEY;
-const JOIN_CODE = process.env.NEXT_PUBLIC_JOIN_CODE?.trim();
 const MAX_BODY_BYTES = 128_000;
 
 export async function POST(req: NextRequest) {
-  // Join code auth (same pattern as /api/mercury)
-  if (JOIN_CODE) {
-    const token = req.headers.get("x-join-token")?.trim();
-    if (!token || token.toLowerCase() !== JOIN_CODE.toLowerCase()) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-  }
+  const authError = validateJoinCode(req);
+  if (authError) return authError;
 
   if (!API_KEY) {
     return NextResponse.json(

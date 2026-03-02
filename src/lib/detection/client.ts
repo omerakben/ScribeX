@@ -1,12 +1,11 @@
 /**
  * Thin client for the AI detection API route.
  * Calls POST /api/detect and returns a DetectionResponse.
- *
- * TODO: If you swap heuristics for a real provider (Pangram, GPTZero, etc.),
- * no changes are needed here — only update src/app/api/detect/route.ts.
+ * The route uses Pangram v3 API when PANGRAM_API_KEY is set, heuristics otherwise.
  */
 
 import type { DetectionResponse } from "@/lib/types";
+import { getJoinToken } from "@/lib/mercury/client";
 
 /**
  * Detect whether the given text is AI-generated.
@@ -21,7 +20,7 @@ export async function detectAI(
 ): Promise<DetectionResponse> {
   const response = await fetch("/api/detect", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", "x-join-token": getJoinToken() },
     body: JSON.stringify({ text }),
     signal,
   });

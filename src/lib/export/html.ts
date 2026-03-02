@@ -2,7 +2,7 @@ import type { Paper, Citation } from "@/lib/types";
 import type { ExportOptions, ExportResult } from "@/lib/types/export";
 import { PAPER_TEMPLATES, CITATION_STYLE_CATALOG } from "@/lib/constants";
 import { downloadText } from "./download";
-import { sanitizeHtml } from "./sanitize";
+import { sanitizeHtml } from "@/lib/utils/sanitize-html";
 
 // ─── Helpers ──────────────────────────────────────────────────
 

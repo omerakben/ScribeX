@@ -2,10 +2,10 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { ShieldCheck, ShieldAlert, Shield, ChevronDown, ChevronUp, Loader2, ScanLine } from "lucide-react";
+import { ShieldCheck, ShieldAlert, Shield, ChevronDown, ChevronUp, Loader2, ScanLine, ExternalLink } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { detectAI } from "@/lib/detection/client";
-import type { DetectionResponse, DetectionSentence } from "@/lib/types";
+import type { DetectionResponse, DetectionSentence, DetectionWindow } from "@/lib/types";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -94,17 +94,66 @@ function ScanningState() {
 }
 
 interface ScoreMeterProps {
-  score: number;
-  label: DetectionResponse["label"];
+  result: DetectionResponse;
 }
 
-function ScoreMeter({ score, label }: ScoreMeterProps) {
-  const config = LABEL_CONFIG[label];
-  const pct = Math.round(score * 100);
+function ScoreMeter({ result }: ScoreMeterProps) {
+  const hasPangram = result.fractionAi !== undefined;
+
+  if (hasPangram) {
+    const ai = Math.round((result.fractionAi ?? 0) * 100);
+    const mixed = Math.round((result.fractionAiAssisted ?? 0) * 100);
+    const human = Math.round((result.fractionHuman ?? 0) * 100);
+
+    return (
+      <div className="space-y-2">
+        {/* Stacked 3-way bar */}
+        <div className="relative h-2.5 w-full overflow-hidden rounded-full bg-ink-100 flex">
+          <motion.div
+            className="h-full bg-red-400"
+            initial={{ width: 0 }}
+            animate={{ width: `${ai}%` }}
+            transition={{ duration: 0.5, ease: "easeOut" }}
+          />
+          <motion.div
+            className="h-full bg-amber-400"
+            initial={{ width: 0 }}
+            animate={{ width: `${mixed}%` }}
+            transition={{ duration: 0.5, ease: "easeOut", delay: 0.1 }}
+          />
+          <motion.div
+            className="h-full bg-emerald-400"
+            initial={{ width: 0 }}
+            animate={{ width: `${human}%` }}
+            transition={{ duration: 0.5, ease: "easeOut", delay: 0.2 }}
+          />
+        </div>
+
+        {/* 3-way legend */}
+        <div className="flex items-center gap-3 text-[10px] text-ink-500">
+          <span className="flex items-center gap-1">
+            <span className="inline-block h-2 w-2 rounded-full bg-red-400" />
+            AI {ai}%
+          </span>
+          <span className="flex items-center gap-1">
+            <span className="inline-block h-2 w-2 rounded-full bg-amber-400" />
+            AI-Assisted {mixed}%
+          </span>
+          <span className="flex items-center gap-1">
+            <span className="inline-block h-2 w-2 rounded-full bg-emerald-400" />
+            Human {human}%
+          </span>
+        </div>
+      </div>
+    );
+  }
+
+  // Heuristic fallback: single bar with threshold markers
+  const config = LABEL_CONFIG[result.label];
+  const pct = Math.round(result.score * 100);
 
   return (
     <div className="space-y-1.5">
-      {/* Bar */}
       <div className="relative h-2 w-full overflow-hidden rounded-full bg-ink-100">
         <motion.div
           className={cn("absolute inset-y-0 left-0 rounded-full", config.barColor)}
@@ -112,7 +161,6 @@ function ScoreMeter({ score, label }: ScoreMeterProps) {
           animate={{ width: `${pct}%` }}
           transition={{ duration: 0.5, ease: "easeOut" }}
         />
-        {/* Threshold markers */}
         <div
           className="absolute inset-y-0 w-px bg-ink-300 opacity-60"
           style={{ left: "30%" }}
@@ -122,8 +170,6 @@ function ScoreMeter({ score, label }: ScoreMeterProps) {
           style={{ left: "60%" }}
         />
       </div>
-
-      {/* Threshold labels */}
       <div className="flex text-[10px] text-ink-400 select-none">
         <span>Human</span>
         <span className="ml-[20%]">Mixed</span>
@@ -133,25 +179,46 @@ function ScoreMeter({ score, label }: ScoreMeterProps) {
   );
 }
 
+/** Map a Pangram window label to our visual label config key. */
+function windowLabelToKey(label: string): DetectionResponse["label"] {
+  const l = label.toLowerCase();
+  if (l.includes("human")) return "human";
+  if (l.includes("ai_assisted") || l.includes("mixed")) return "mixed";
+  return "ai";
+}
+
 interface SentenceBreakdownProps {
   sentences: DetectionSentence[];
+  windows?: DetectionWindow[];
   label: DetectionResponse["label"];
 }
 
-function SentenceBreakdown({ sentences, label }: SentenceBreakdownProps) {
-  if (sentences.length === 0) return null;
+function SentenceBreakdown({ sentences, windows, label }: SentenceBreakdownProps) {
+  // Prefer windows (Pangram) over sentences (heuristic)
+  const items = windows && windows.length > 0
+    ? windows.map((w) => ({
+        text: w.text,
+        displayLabel: windowLabelToKey(w.label),
+        confidence: w.confidence,
+      }))
+    : sentences.map((s) => ({
+        text: s.text,
+        displayLabel: getLabel(s.score),
+        confidence: undefined as number | undefined,
+      }));
+
+  if (items.length === 0) return null;
   const config = LABEL_CONFIG[label];
 
   return (
     <div className="mt-3 space-y-1.5">
       <p className="text-[11px] font-semibold uppercase tracking-wide text-ink-400">
-        Sentence breakdown
+        {windows && windows.length > 0 ? "Segment breakdown" : "Sentence breakdown"}
       </p>
       <div className="max-h-48 space-y-1 overflow-y-auto pr-1">
-        {sentences.map((s, i) => {
-          const pct = Math.round(s.score * 100);
-          const sentenceLabel = getLabel(s.score);
-          const isHigh = s.score >= THRESHOLDS.mixed;
+        {items.map((item, i) => {
+          const itemConfig = LABEL_CONFIG[item.displayLabel];
+          const isHigh = item.displayLabel === "ai" || item.displayLabel === "mixed";
 
           return (
             <div
@@ -163,17 +230,24 @@ function SentenceBreakdown({ sentences, label }: SentenceBreakdownProps) {
             >
               <div className="flex items-start justify-between gap-2">
                 <p className="text-xs text-ink-700 leading-relaxed line-clamp-2">
-                  {s.text}
+                  {item.text}
                 </p>
                 <span
                   className={cn(
                     "shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-semibold",
-                    LABEL_CONFIG[sentenceLabel].badgeBg,
-                    LABEL_CONFIG[sentenceLabel].badgeText,
+                    itemConfig.badgeBg,
+                    itemConfig.badgeText,
                     "border"
                   )}
                 >
-                  {pct}%
+                  {itemConfig.label}
+                  {item.confidence != null && (
+                    <span className="ml-0.5 opacity-70">
+                      {typeof item.confidence === "number"
+                        ? `${Math.round(item.confidence * 100)}%`
+                        : item.confidence}
+                    </span>
+                  )}
                 </span>
               </div>
             </div>
@@ -354,7 +428,7 @@ export function AIDetectionBadge({
           </button>
 
           {/* Expand/collapse breakdown */}
-          {effectiveResult.sentences.length > 0 && (
+          {(effectiveResult.sentences.length > 0 || (effectiveResult.windows?.length ?? 0) > 0) && (
             <button
               type="button"
               onClick={() => setExpanded((v) => !v)}
@@ -376,11 +450,11 @@ export function AIDetectionBadge({
       </div>
 
       {/* ── Score meter ── */}
-      <ScoreMeter score={effectiveResult.score} label={effectiveResult.label} />
+      <ScoreMeter result={effectiveResult} />
 
       {/* ── Expandable sentence breakdown ── */}
       <AnimatePresence>
-        {effectiveExpanded && effectiveResult.sentences.length > 0 && (
+        {effectiveExpanded && (effectiveResult.sentences.length > 0 || (effectiveResult.windows?.length ?? 0) > 0) && (
           <motion.div
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
@@ -390,16 +464,32 @@ export function AIDetectionBadge({
           >
             <SentenceBreakdown
               sentences={effectiveResult.sentences}
+              windows={effectiveResult.windows}
               label={effectiveResult.label}
             />
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* ── Disclaimer ── */}
-      <p className="text-[10px] text-ink-400 leading-relaxed">
-        Heuristic analysis only — scores are indicative, not definitive.
-      </p>
+      {/* ── Dashboard link + Disclaimer ── */}
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-[10px] text-ink-400 leading-relaxed">
+          {effectiveResult.fractionAi !== undefined
+            ? "Powered by Pangram"
+            : "Heuristic analysis only — scores are indicative, not definitive."}
+        </p>
+        {effectiveResult.dashboardLink && (
+          <a
+            href={effectiveResult.dashboardLink}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1 text-[10px] font-medium text-mercury-600 hover:text-mercury-800 transition-colors shrink-0"
+          >
+            <ExternalLink className="h-3 w-3" />
+            View on Pangram
+          </a>
+        )}
+      </div>
     </motion.div>
   );
 }

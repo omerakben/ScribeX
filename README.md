@@ -115,7 +115,7 @@ User ─→ EditorCanvas / AIPanel / FloatingMenu
 ```
 
 - **Browser never calls Inception directly** — all AI requests proxy through `/api/mercury` which attaches the server-side `INCEPTION_API_KEY`
-- **Middleware** (`src/middleware.ts`) applies CSRF protection and rate limiting (60 req/min per IP) to all `/api/*` routes
+- **Middleware** (`src/proxy.ts`) applies CSRF protection and rate limiting (60 req/min per IP) to all `/api/*` routes
 - **Mercury Client** routes writing modes to the correct model: `mercury-2` for generative work, `mercury-edit` for autocomplete/FIM and short edits
 - **Temperature engineering** — 22-action temperature map across 5 tiers (0.0 deterministic to 0.9 high creativity) with dynamic token caps based on input length
 
@@ -359,15 +359,15 @@ src/
 │   ├── export/             # Export format dialog
 │   ├── landing/            # Marketing page sections
 │   ├── shared/             # JoinGate, ToasterProvider, DarkModeProvider
-│   └── ui/                 # shadcn/ui primitives (barrel export)
+│   └── ui/                 # shadcn/ui primitives (direct imports)
 ├── data/                   # humanizer-dataset.json (456 entries, server-only)
 ├── hooks/                  # useHydration
 ├── lib/
 │   ├── constants/          # System prompts, commands, templates, temperatures (22-action map)
 │   ├── detection/          # AI detection: heuristics, client
-│   ├── export/             # 6 format handlers + sanitizer + utils
+│   ├── export/             # 6 format handlers + utils
 │   ├── extensions/         # ghost-text (multi-alt), mermaid-block,
-│   │                       #   floating-menu-plugin, keyboard-shortcuts
+│   │                       #   keyboard-shortcuts
 │   ├── humanizer/          # Dataset loader, pipeline, types
 │   ├── mercury/            # Mercury API client wrapper
 │   ├── prompts/            # 37 prompt files: commands/, synonyms/, stylize/,
@@ -378,7 +378,7 @@ src/
 │   └── utils/              # cn, markdown-to-html, change-block-parser,
 │                           #   readability, content-hash, sanitize-html,
 │                           #   selection-markers, context-window
-├── middleware.ts            # CSRF + rate limiting for /api/*
+├── proxy.ts                # CSRF + rate limiting for /api/*
 └── types/                  # Module declarations (html2pdf.js)
 ```
 

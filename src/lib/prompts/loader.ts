@@ -56,7 +56,7 @@ import { CONTINUE_PROMPT } from "./assistant/continue";
 /**
  * Registry mapping command IDs to their raw prompt templates.
  */
-const COMMAND_PROMPTS: Record<string, string> = {
+const COMMAND_PROMPTS = {
   generate: GENERATE_PROMPT,
   expand: EXPAND_PROMPT,
   simplify: SIMPLIFY_PROMPT,
@@ -85,14 +85,17 @@ const COMMAND_PROMPTS: Record<string, string> = {
   "analyze-tone": ANALYZE_TONE_PROMPT,
   summarize: SUMMARIZE_PROMPT,
   continue: CONTINUE_PROMPT,
-};
+} as const satisfies Record<string, string>;
+
+/** Union of all registered prompt command IDs. */
+export type PromptId = keyof typeof COMMAND_PROMPTS;
 
 /**
  * Get a raw command prompt template by command ID.
  * Returns undefined if the command ID is not recognized.
  */
-export function getRawCommandPrompt(commandId: string): string | undefined {
-  return COMMAND_PROMPTS[commandId];
+export function getRawCommandPrompt(commandId: PromptId | (string & {})): string | undefined {
+  return COMMAND_PROMPTS[commandId as PromptId];
 }
 
 /**

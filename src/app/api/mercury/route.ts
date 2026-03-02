@@ -1,16 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
+import { validateJoinCode } from "@/lib/utils/api-auth";
+import { MERCURY_API_BASE, MERCURY_ENDPOINTS } from "@/lib/constants";
 
-const MERCURY_API_BASE = "https://api.inceptionlabs.ai/v1";
 const API_KEY = process.env.INCEPTION_API_KEY;
-const JOIN_CODE = process.env.NEXT_PUBLIC_JOIN_CODE?.trim();
 const MAX_BODY_BYTES = 512_000;
-
-const ENDPOINT_MAP: Record<string, string> = {
-  chat: "/chat/completions",
-  apply: "/apply/completions",
-  fim: "/fim/completions",
-  edit: "/edit/completions",
-};
 
 const ALLOWED_MODELS = new Set([
   "mercury-coder-small",
@@ -33,13 +26,8 @@ const FORWARDED_FIELDS = new Set([
 ]);
 
 export async function POST(req: NextRequest) {
-  // A) Join code auth
-  if (JOIN_CODE) {
-    const token = req.headers.get("x-join-token")?.trim();
-    if (!token || token.toLowerCase() !== JOIN_CODE.toLowerCase()) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-  }
+  const authError = validateJoinCode(req);
+  if (authError) return authError;
 
   if (!API_KEY) {
     return NextResponse.json(
@@ -58,7 +46,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { endpoint, ...raw } = body;
 
-    const path = ENDPOINT_MAP[endpoint];
+    const path = MERCURY_ENDPOINTS[endpoint as keyof typeof MERCURY_ENDPOINTS];
     if (!path) {
       return NextResponse.json({ error: "Invalid endpoint" }, { status: 400 });
     }

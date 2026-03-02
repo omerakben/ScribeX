@@ -7,8 +7,6 @@ import { exportHTML } from "./html";
 import { exportBibTeX } from "./bibtex";
 import { exportLaTeX } from "./latex";
 
-export { sanitizeHtml } from "./sanitize";
-
 export async function exportPaper(
   paper: Paper,
   options: ExportOptions

@@ -139,12 +139,17 @@ export interface CitationSearchResult {
 
 // ─── Editor Types ──────────────────────────────────────────────
 
+export type SlashCommandAction =
+  | "generate" | "expand" | "simplify" | "academic" | "cite"
+  | "outline" | "counter" | "evidence" | "transition" | "abstract"
+  | "rewrite" | "diffuse" | "mermaid" | "summarize" | "continue";
+
 export interface SlashCommand {
   id: string;
   label: string;
   description: string;
   icon: string;
-  action: string;
+  action: SlashCommandAction;
   model: MercuryModel;
 }
 
@@ -214,10 +219,23 @@ export interface DetectionSentence {
   score: number; // 0–1, probability of AI authorship
 }
 
+/** Pangram per-segment window with label and optional confidence. */
+export interface DetectionWindow {
+  text: string;
+  label: string; // "ai" | "human" | "ai_assisted"
+  confidence?: string | number; // Pangram returns "High"/"Medium"/"Low" strings
+}
+
 export interface DetectionResponse {
   score: number; // 0–1, overall AI probability
   label: "human" | "mixed" | "ai";
   sentences: DetectionSentence[];
+  // Pangram-specific rich fields (absent when using heuristic fallback)
+  fractionAi?: number;
+  fractionAiAssisted?: number;
+  fractionHuman?: number;
+  windows?: DetectionWindow[];
+  dashboardLink?: string | null;
 }
 
 // ─── User & Session Types ──────────────────────────────────────

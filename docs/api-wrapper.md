@@ -23,7 +23,7 @@ Route responsibilities:
 - Attach bearer auth from `INCEPTION_API_KEY`
 - Proxy streaming and non-streaming responses
 
-Middleware responsibilities (`src/middleware.ts`):
+Middleware responsibilities (`src/proxy.ts`):
 
 - CSRF validation (origin header check against `NEXT_PUBLIC_APP_URL`)
 - Rate limiting (60 req/min per IP, in-memory sliding window)

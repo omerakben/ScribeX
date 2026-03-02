@@ -28,7 +28,9 @@ function isRateLimited(ip: string): boolean {
   return entry.count > MAX_REQUESTS;
 }
 
-export function middleware(request: NextRequest) {
+// Migrated from middleware.ts → proxy.ts per Next.js 16 convention.
+// See: https://nextjs.org/docs/messages/middleware-to-proxy
+export function proxy(request: NextRequest) {
   // 1. CSRF — reject cross-origin requests
   const origin = request.headers.get("origin");
   if (origin) {

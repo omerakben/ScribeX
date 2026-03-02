@@ -33,7 +33,7 @@ export interface TruncatedContext {
  * Words longer than ~5 chars tend to span 2+ tokens; short words ~1 token.
  * Falls back to chars/4 for non-word content (code, math, symbols).
  */
-export function estimateTokenCount(text: string): number {
+function estimateTokenCount(text: string): number {
   if (!text) return 0;
 
   // Count words and estimate their token cost
@@ -55,14 +55,6 @@ export function estimateTokenCount(text: string): number {
   const nonWordTokens = Math.ceil(nonWordCharCount / 4);
 
   return wordTokens + nonWordTokens;
-}
-
-/**
- * Compute a dynamic token cap for short inputs.
- * Prevents over-fetching context for tiny selections.
- */
-export function dynamicTokenCap(wordCount: number): number {
-  return Math.max(64, wordCount * 10);
 }
 
 // ─── Paragraph Boundary Helpers ────────────────────────────────

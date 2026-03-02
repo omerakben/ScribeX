@@ -507,11 +507,18 @@ function OutlineTab({ editor }: { editor: Editor | null }) {
       setHeadings(items);
     };
 
+    let timer: ReturnType<typeof setTimeout>;
+    const debouncedExtract = () => {
+      clearTimeout(timer);
+      timer = setTimeout(extract, 500);
+    };
+
     extract();
-    editor.on("update", extract);
+    editor.on("update", debouncedExtract);
 
     return () => {
-      editor.off("update", extract);
+      clearTimeout(timer);
+      editor.off("update", debouncedExtract);
     };
   }, [editor]);
 

@@ -3,7 +3,7 @@
  * Verifies the join-code gate blocks/grants access correctly.
  */
 import { test, expect } from "@playwright/test";
-import { JOIN_CODE, seedJoinToken } from "./helpers";
+import { JOIN_CODE } from "./helpers";
 
 test.describe("Auth Gate", () => {
   test("blocks /dashboard without join code", async ({ page }) => {

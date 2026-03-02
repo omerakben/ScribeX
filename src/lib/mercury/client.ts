@@ -1,10 +1,9 @@
 import { getSystemPrompt } from "@/lib/prompts";
 import { getTemperature } from "@/lib/constants/temperatures";
+import { STORAGE_KEYS } from "@/lib/storage";
 import type {
-  MercuryModel,
   MercuryMessage,
   ReasoningEffort,
-  WritingMode,
   HumanizerResponse,
   HumanizerOneResponse,
 } from "@/lib/types";
@@ -25,10 +24,10 @@ import type {
 //   humanizeText()             → POST /api/humanize (dedicated route, never /api/mercury)
 //   humanizeOneMore()          → POST /api/humanize (dedicated route, never /api/mercury)
 
-function getJoinToken(): string {
+export function getJoinToken(): string {
   const envCode = process.env.NEXT_PUBLIC_JOIN_CODE ?? "";
   if (typeof window === "undefined") return envCode;
-  return localStorage.getItem("scribex-join-code") ?? envCode;
+  return localStorage.getItem(STORAGE_KEYS.joinCode) ?? envCode;
 }
 
 /**
@@ -48,42 +47,6 @@ export function calculateMaxTokens(inputText: string, defaultMax: number = 4096)
     return Math.max(64, wordCount * 10);
   }
   return defaultMax;
-}
-
-/**
- * Route a WritingMode to the correct Mercury model.
- *
- * Model selection rules:
- * - `mercury-2`    — generative tasks: compose, deep-rewrite, review, diffusion-draft.
- * - `mercury-edit` — precise edit/completion tasks: autocomplete, next-edit, and
- *                    short quick-edits (< 500 chars). Longer quick-edits fall back
- *                    to `mercury-2` for better quality on larger selections.
- *
- * NOTE: This function is currently unused — callers in editor-canvas.tsx and
- * floating-menu.tsx select endpoints directly. It is preserved as the canonical
- * routing reference and for future refactoring (see Phase 8 / temperature engineering).
- *
- * @param mode - The active WritingMode.
- * @param editScope - Character count of the selection for `quick-edit` branching.
- * @returns The appropriate MercuryModel identifier.
- */
-export function routeToModel(mode: WritingMode, editScope?: number): MercuryModel {
-  switch (mode) {
-    case "compose":
-    case "deep-rewrite":
-    case "review":
-    case "diffusion-draft":
-      return "mercury-2";
-    case "autocomplete":
-    case "next-edit":
-      return "mercury-edit";
-    case "quick-edit":
-      // Short selections (< 500 chars) benefit from mercury-edit's precision.
-      // Longer selections need mercury-2's generative capability.
-      return (editScope ?? 0) < 500 ? "mercury-edit" : "mercury-2";
-    default:
-      return "mercury-2";
-  }
 }
 
 /**

@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Reference example folder — not part of the project source
+    "AI_CANVAS_Example/**",
   ]),
 ]);
 

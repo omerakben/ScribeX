@@ -4,7 +4,6 @@ import type {
   CitationStyleId,
   CitationStyleInput,
   CitationStyleSelection,
-  LegacyCitationStyleId,
   PaperTemplate,
   SlashCommand,
 } from "@/lib/types";
@@ -12,11 +11,6 @@ import type {
 // ─── Mercury API ───────────────────────────────────────────────
 
 export const MERCURY_API_BASE = "https://api.inceptionlabs.ai/v1";
-
-export const MERCURY_MODELS = {
-  reasoning: "mercury-2",
-  edit: "mercury-edit",
-} as const;
 
 export const MERCURY_ENDPOINTS = {
   chat: "/chat/completions",
@@ -216,15 +210,6 @@ export const CITATION_STYLE_CATALOG: Record<CitationStyleId, CitationStyleSpec> 
   },
 };
 
-const LEGACY_CITATION_STYLE_MAP: Record<LegacyCitationStyleId, CitationStyleId> = {
-  apa7: "apa-7",
-  mla9: "mla-9",
-  chicago: "chicago-17",
-  ieee: "ieee",
-  harvard: "harvard",
-  vancouver: "vancouver-icmje",
-};
-
 const STYLE_ALIAS_MAP: Record<string, CitationStyleId> = {
   "apa-7": "apa-7",
   apa7: "apa-7",
@@ -304,32 +289,6 @@ export function normalizeCitationStyleSelection(
     id,
     chicagoVariant: DEFAULT_CHICAGO_VARIANT,
   };
-}
-
-export function normalizeCitationStyle(
-  legacy: LegacyCitationStyleId | CitationStyleSelection | CitationStyleId | undefined
-): CitationStyleSelection {
-  return normalizeCitationStyleSelection(legacy);
-}
-
-export function getCitationStyleSelection(
-  style: CitationStyleInput | string | null | undefined
-): CitationStyleSelection {
-  return normalizeCitationStyleSelection(style);
-}
-
-export function getLegacyCitationStyleId(
-  style: CitationStyleInput | string | null | undefined
-): LegacyCitationStyleId {
-  const normalized = normalizeCitationStyleId(style);
-
-  for (const [legacyId, mapped] of Object.entries(LEGACY_CITATION_STYLE_MAP) as Array<
-    [LegacyCitationStyleId, CitationStyleId]
-  >) {
-    if (mapped === normalized) return legacyId;
-  }
-
-  return "apa7";
 }
 
 export function isNumericCitationStyle(style: CitationStyleInput | string | null | undefined): boolean {

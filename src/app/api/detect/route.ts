@@ -3,37 +3,94 @@
  *
  * Accepts { text: string } and returns a DetectionResponse.
  *
- * Currently uses a heuristic-based mock detector (no external API key required).
- * All analysis runs server-side using text pattern analysis.
+ * When PANGRAM_API_KEY is configured, calls the Pangram v3 API for real
+ * AI detection with 3-way classification (AI / AI-Assisted / Human),
+ * per-segment windows, and a public dashboard link.
  *
- * TODO: Swap heuristics for a real provider by:
- *   1. Add your provider key to .env (e.g. PANGRAM_API_KEY, GPTZERO_API_KEY)
- *   2. Replace the `analyzeText(body.text)` call with a fetch to the provider
- *   3. Map the provider response to DetectionResponse shape
- *   Example providers: Pangram (pangram.com), GPTZero (gptzero.me), Sapling (sapling.ai)
+ * Falls back to heuristic analysis (src/lib/detection/heuristics.ts) when
+ * no Pangram key is set, so the feature works without an external API key.
  *
  * Security:
- * - CSRF + rate limiting enforced by middleware (src/middleware.ts)
+ * - CSRF + rate limiting enforced by proxy (src/proxy.ts)
  * - Join-code auth mirrors the mercury route pattern
- * - Body size capped at 32 KB (detection calls on large docs are expensive)
  */
 
 import { NextRequest, NextResponse } from "next/server";
 import { analyzeText } from "@/lib/detection/heuristics";
+import { validateJoinCode } from "@/lib/utils/api-auth";
+import type { DetectionResponse, DetectionWindow } from "@/lib/types";
 
-const JOIN_CODE = process.env.NEXT_PUBLIC_JOIN_CODE?.trim();
-const MAX_BODY_BYTES = 32_000; // 32 KB — enough for a full paper section
+const PANGRAM_API_KEY = process.env.PANGRAM_API_KEY?.trim();
+const PANGRAM_API_URL = "https://text.api.pangram.com/v3";
+const PANGRAM_TIMEOUT_MS = 30_000;
+
+const MAX_BODY_BYTES = 64_000; // 64 KB — Pangram handles longer texts
 const MIN_TEXT_LENGTH = 10;
-const MAX_TEXT_LENGTH = 20_000;
+const MAX_TEXT_LENGTH = 50_000;
+
+// ─── Pangram response mapping ─────────────────────────────────────────────────
+
+interface PangramWindow {
+  text?: string;
+  label?: string;
+  confidence?: string | number;
+}
+
+interface PangramResponse {
+  fraction_ai?: number;
+  fraction_ai_assisted?: number;
+  fraction_human?: number;
+  windows?: PangramWindow[];
+  dashboard_link?: string;
+  prediction_short?: string;
+}
+
+function mapWindowToScore(label: string): number {
+  const l = label.toLowerCase();
+  if (l.includes("human")) return 0.1;
+  if (l.includes("ai_assisted") || l.includes("mixed")) return 0.5;
+  return 0.9; // "ai"
+}
+
+function mapPangramResponse(data: PangramResponse): DetectionResponse {
+  const fractionAi = data.fraction_ai ?? 0;
+  const fractionAiAssisted = data.fraction_ai_assisted ?? 0;
+  const fractionHuman = data.fraction_human ?? 0;
+
+  // Overall score: fraction_ai is the primary signal
+  const score = Math.round(fractionAi * 100) / 100;
+  const label: DetectionResponse["label"] =
+    score < 0.3 ? "human" : score < 0.6 ? "mixed" : "ai";
+
+  // Map windows to sentences for backward compatibility
+  const windows: DetectionWindow[] = (data.windows ?? []).map((w) => ({
+    text: w.text ?? "",
+    label: w.label ?? "unknown",
+    confidence: w.confidence,
+  }));
+
+  const sentences = windows.map((w) => ({
+    text: w.text,
+    score: mapWindowToScore(w.label),
+  }));
+
+  return {
+    score,
+    label,
+    sentences,
+    fractionAi,
+    fractionAiAssisted,
+    fractionHuman,
+    windows,
+    dashboardLink: data.dashboard_link ?? null,
+  };
+}
+
+// ─── Route handler ────────────────────────────────────────────────────────────
 
 export async function POST(req: NextRequest) {
-  // ── Auth ──────────────────────────────────────────────────────────────────
-  if (JOIN_CODE) {
-    const token = req.headers.get("x-join-token")?.trim();
-    if (!token || token.toLowerCase() !== JOIN_CODE.toLowerCase()) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-  }
+  const authError = validateJoinCode(req);
+  if (authError) return authError;
 
   // ── Body size guard ───────────────────────────────────────────────────────
   const contentLength = req.headers.get("content-length");
@@ -65,11 +122,45 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // ── Analyze ───────────────────────────────────────────────────────────────
+  // ── Analyze: Pangram API or heuristic fallback ────────────────────────────
   try {
+    if (PANGRAM_API_KEY) {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), PANGRAM_TIMEOUT_MS);
+
+      const response = await fetch(PANGRAM_API_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-key": PANGRAM_API_KEY,
+        },
+        body: JSON.stringify({ text, public_dashboard_link: true }),
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeout);
+
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        const msg = (err as Record<string, string>).error ?? `Pangram API error (${response.status})`;
+        console.error("Pangram API error:", response.status, msg);
+        return NextResponse.json({ error: msg }, { status: 502 });
+      }
+
+      const data: PangramResponse = await response.json();
+      return NextResponse.json(mapPangramResponse(data));
+    }
+
+    // Fallback: heuristic analysis (no API key configured)
     const result = analyzeText(text);
     return NextResponse.json(result);
   } catch (error) {
+    if (error instanceof DOMException && error.name === "AbortError") {
+      return NextResponse.json(
+        { error: "Detection timed out — try a shorter text" },
+        { status: 504 }
+      );
+    }
     console.error("Detection route error:", error);
     return NextResponse.json(
       { error: "Internal server error" },

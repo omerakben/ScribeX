@@ -27,6 +27,13 @@ const ALLOWED_ATTRS: Record<string, Set<string>> = {
 // Protocols blocked in href values
 const BLOCKED_PROTOCOLS = ["javascript:", "data:", "vbscript:"];
 
+// Pre-compiled regexes for dangerous block elements (avoid recompiling per call)
+const DANGEROUS_BLOCK_TAGS = "iframe|object|embed|form|input|button|select|textarea|meta|link|base";
+// These regexes use the `g` flag for .replace() (replaces all matches).
+// Do NOT use .test() or .exec() on these — lastIndex statefulness bug.
+const DANGEROUS_BLOCK_RE = new RegExp(`<(${DANGEROUS_BLOCK_TAGS})\\b[^>]*>[\\s\\S]*?<\\/\\1>`, "gi");
+const DANGEROUS_VOID_RE = new RegExp(`<(${DANGEROUS_BLOCK_TAGS})\\b[^>]*/?>`, "gi");
+
 /**
  * Normalize a URL value for protocol checking.
  * Strips whitespace, decodes %xx sequences, lowercases.
@@ -124,16 +131,9 @@ export function sanitizeHtml(html: string): string {
   result = result.replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, "");
 
   // 3. Remove dangerous block elements entirely (content + tags)
-  const dangerousBlockTags = "iframe|object|embed|form|input|button|select|textarea|meta|link|base";
-  result = result.replace(
-    new RegExp(`<(${dangerousBlockTags})\\b[^>]*>[\\s\\S]*?<\\/\\1>`, "gi"),
-    ""
-  );
+  result = result.replace(DANGEROUS_BLOCK_RE, "");
   // Also strip self-closing / void variants
-  result = result.replace(
-    new RegExp(`<(${dangerousBlockTags})\\b[^>]*/?>`, "gi"),
-    ""
-  );
+  result = result.replace(DANGEROUS_VOID_RE, "");
 
   // 4. Process remaining tags: allow or strip (preserve text content)
   result = result.replace(/<(\/?)(\w[\w-]*)((?:\s[^>]*)?)(\/?)>/gi, (fullMatch) => {

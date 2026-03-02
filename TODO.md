@@ -716,7 +716,7 @@
 - `js/modules/core/HtmlSanitizer.js` — profile-based sanitization (documentLegacy/document/chat)
 - `prompts/document/autoformat-html.txt` — XSS prevention embedded in prompt (tag allowlist, URL protocol denylist)
 
-**ScribeX Target:** `src/lib/utils/sanitize-html.ts` — new utility (or enhance existing `src/lib/export/sanitize.ts`)
+**ScribeX Target:** `src/lib/utils/sanitize-html.ts` — 5-stage sanitization pipeline
 **ScribeX Impact:** `src/lib/utils/markdown-to-html.ts`, `src/components/editor/ai-panel.tsx`
 
 ---
@@ -926,8 +926,7 @@ Use `TeamCreate` to create the team, `TaskCreate` to define the task graph, and 
 
 **Phase 1 — Floating Menu** ✅ (Commit `49401d4`)
 
-- `src/lib/extensions/floating-menu-plugin.ts` — ProseMirror plugin for text selection detection, 300ms debounce, viewport edge flip, Escape/mousedown-outside dismiss
-- `src/components/editor/floating-menu.tsx` — 4-button fan-out (Rewrite, Simplify, Academic, Expand), Framer Motion spring animations
+- `src/components/editor/floating-menu.tsx` — 10-button fan-out with self-contained positioning via TipTap events, Framer Motion spring animations
 - `src/components/editor/floating-ribbon.tsx` — Tier-2 expansion panel with 4 modes (rewrite, stylize, **humanize**, **detect**). **Humanize and Detect handlers are stubs — this is what Phase 2 wires up.**
 - `src/lib/utils/change-block-parser.ts` — Regex parser for ` ```change` blocks, `parseChangeBlocks()`, `hasChangeBlocks()`
 - `src/components/editor/change-diff-card.tsx` — Visual diff card with Apply/Decline, ProseMirror text replacement
@@ -1063,7 +1062,7 @@ Use `TeamCreate` to create the team, `TaskCreate` to define the task graph, and 
 - `src/app/api/detect/route.ts` — New API route (proxy to detection service)
 - `src/components/editor/ai-detection-badge.tsx` — New component
 - Modify `src/components/editor/floating-ribbon.tsx` — Replace detect stubs
-- Modify `src/middleware.ts` — Add rate limiting for `/api/detect`
+- Modify `src/proxy.ts` — Add rate limiting for `/api/detect`
 
 **Requirements:**
 
